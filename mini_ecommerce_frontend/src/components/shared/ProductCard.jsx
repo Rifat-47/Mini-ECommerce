@@ -1,0 +1,146 @@
+import { Link } from 'react-router-dom'
+import { ShoppingCart, Heart } from 'lucide-react'
+import { toast } from 'sonner'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/utils'
+import useCartStore from '@/store/cartStore'
+import useWishlistStore from '@/store/wishlistStore'
+import useAuthStore from '@/store/authStore'
+import StarRating from '@/components/shared/StarRating'
+
+export default function ProductCard({ product }) {
+  const addItem = useCartStore((s) => s.addItem)
+  const wishlisted = useWishlistStore((s) => s.items.some((i) => i.product_id === product.id))
+  const addToWishlist = useWishlistStore((s) => s.addItem)
+  const addToBackend = useWishlistStore((s) => s.addToBackend)
+  const removeFromWishlist = useWishlistStore((s) => s.removeItem)
+  const removeFromBackend = useWishlistStore((s) => s.removeFromBackend)
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+
+  const {
+    id,
+    name,
+    price,
+    discount_percentage,
+    average_rating,
+    review_count,
+    stock,
+    images = [],
+  } = product
+
+  const primaryImage = images.find((img) => img.is_primary)?.image || null
+  const discountPct = parseFloat(discount_percentage || 0)
+  const originalPrice = parseFloat(price)
+  const effectivePrice = discountPct > 0
+    ? originalPrice * (1 - discountPct / 100)
+    : originalPrice
+  const inStock = stock > 0
+
+  function handleAddToCart(e) {
+    e.preventDefault()
+    e.stopPropagation()
+    if (!inStock) return
+    addItem(product, 1)
+    toast.success(`${name} added to cart`)
+  }
+
+  function handleWishlist(e) {
+    e.preventDefault()
+    e.stopPropagation()
+    if (wishlisted) {
+      isAuthenticated ? removeFromBackend(id) : removeFromWishlist(id)
+    } else {
+      isAuthenticated ? addToBackend(product) : addToWishlist(product)
+    }
+  }
+
+  return (
+    <Link
+      to={`/products/${id}`}
+      className="group flex flex-col bg-card border border-border rounded-xl overflow-hidden hover:shadow-md transition-shadow duration-200"
+    >
+      {/* Image */}
+      <div className="relative aspect-square bg-secondary overflow-hidden">
+        {primaryImage ? (
+          <img
+            src={primaryImage}
+            alt={name}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">
+            No image
+          </div>
+        )}
+
+        {/* Discount badge */}
+        {discountPct > 0 && (
+          <Badge className="absolute top-2 left-2 bg-destructive text-destructive-foreground text-xs">
+            -{discountPct}%
+          </Badge>
+        )}
+
+        {/* Wishlist button */}
+        <button
+          onClick={handleWishlist}
+          className={cn(
+            'absolute top-2 right-2 p-1.5 rounded-full bg-background/80 backdrop-blur-sm hover:bg-background transition-colors',
+            wishlisted ? 'text-destructive' : 'text-muted-foreground hover:text-destructive',
+          )}
+          aria-label={wishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
+        >
+          <Heart className={cn('h-4 w-4', wishlisted && 'fill-current')} />
+        </button>
+
+        {/* Out of stock overlay */}
+        {!inStock && (
+          <div className="absolute inset-0 bg-background/70 flex items-center justify-center">
+            <span className="text-sm font-medium text-muted-foreground">Out of stock</span>
+          </div>
+        )}
+      </div>
+
+      {/* Content */}
+      <div className="flex flex-col flex-1 p-4 gap-2">
+        <h3 className="font-medium text-sm text-foreground line-clamp-2 leading-snug">
+          {name}
+        </h3>
+
+        {/* Rating */}
+        {average_rating > 0 && (
+          <div className="flex items-center gap-1.5">
+            <StarRating value={average_rating} />
+            <span className="text-xs text-muted-foreground">
+              {parseFloat(average_rating).toFixed(1)}
+              {review_count > 0 && ` (${review_count})`}
+            </span>
+          </div>
+        )}
+
+        {/* Price */}
+        <div className="flex items-center gap-2 mt-auto">
+          <span className="font-semibold text-foreground">
+            ৳{effectivePrice.toFixed(2)}
+          </span>
+          {discountPct > 0 && (
+            <span className="text-xs text-muted-foreground line-through">
+              ৳{originalPrice.toFixed(2)}
+            </span>
+          )}
+        </div>
+
+        {/* Add to cart */}
+        <Button
+          size="sm"
+          className={cn('w-full mt-1', !inStock && 'opacity-50 cursor-not-allowed')}
+          disabled={!inStock}
+          onClick={handleAddToCart}
+        >
+          <ShoppingCart className="h-4 w-4 mr-2" />
+          {inStock ? 'Add to Cart' : 'Out of Stock'}
+        </Button>
+      </div>
+    </Link>
+  )
+}

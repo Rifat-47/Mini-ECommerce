@@ -1,0 +1,31 @@
+# ── Python / Django ───────────────────────────────────────
+mini_ecommerce_backend/venv/
+mini_ecommerce_backend/.env
+mini_ecommerce_backend/__pycache__/
+mini_ecommerce_backend/**/__pycache__/
+mini_ecommerce_backend/*.sqlite3
+mini_ecommerce_backend/media/
+
+# ── Node / React ──────────────────────────────────────────
+mini_ecommerce_frontend/node_modules/
+mini_ecommerce_frontend/dist/
+mini_ecommerce_frontend/.env
+mini_ecommerce_frontend/.env.local
+mini_ecommerce_frontend/.env.*.local
+
+# ── Postman collection (keep private) ────────────────────
+mini_ecommerce_backend/postman/
+
+# ── Business docs (keep private) ─────────────────────────
+mini_ecommerce_backend/business docs/
+mini_ecommerce_frontend/docs/
+
+# ── Staging deployment notes (keep private) ──────────────
+STAGING_DEPLOYMENT.md
+
+# ── OS / Editor ───────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log

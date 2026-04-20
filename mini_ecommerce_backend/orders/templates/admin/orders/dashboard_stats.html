@@ -1,0 +1,90 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block title %}Dashboard Stats | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">{% trans 'Home' %}</a>
+  &rsaquo; Dashboard Stats
+</div>
+{% endblock %}
+
+{% block content %}
+<h1>Dashboard Stats</h1>
+
+{# ── Overview cards ──────────────────────────────────────────────────────── #}
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:16px;margin:20px 0;">
+
+  {% with cards=overview.items %}
+  <div style="background:#fff;border:1px solid #ddd;border-radius:6px;padding:20px;text-align:center;">
+    <div style="font-size:28px;font-weight:700;color:#417690;">{{ overview.total_orders }}</div>
+    <div style="font-size:13px;color:#666;margin-top:4px;">Total Orders</div>
+  </div>
+
+  <div style="background:#fff;border:1px solid #ddd;border-radius:6px;padding:20px;text-align:center;">
+    <div style="font-size:28px;font-weight:700;color:#417690;">৳{{ overview.total_revenue }}</div>
+    <div style="font-size:13px;color:#666;margin-top:4px;">Total Revenue</div>
+  </div>
+
+  <div style="background:#fff;border:1px solid #ddd;border-radius:6px;padding:20px;text-align:center;">
+    <div style="font-size:28px;font-weight:700;color:#417690;">{{ overview.total_customers }}</div>
+    <div style="font-size:13px;color:#666;margin-top:4px;">Total Customers</div>
+  </div>
+
+  <div style="background:#fff;border:1px solid #ddd;border-radius:6px;padding:20px;text-align:center;">
+    <div style="font-size:28px;font-weight:700;color:#417690;">{{ overview.new_users_today }}</div>
+    <div style="font-size:13px;color:#666;margin-top:4px;">New Users Today</div>
+  </div>
+  {% endwith %}
+
+</div>
+
+{# ── Orders by status ────────────────────────────────────────────────────── #}
+<h2 style="margin-top:32px;">Orders by Status</h2>
+<table style="width:100%;border-collapse:collapse;background:#fff;border:1px solid #ddd;border-radius:6px;overflow:hidden;">
+  <thead>
+    <tr style="background:#417690;color:#fff;">
+      <th style="padding:10px 16px;text-align:left;">Status</th>
+      <th style="padding:10px 16px;text-align:right;">Count</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for row in orders_by_status %}
+    <tr style="border-top:1px solid #eee;">
+      <td style="padding:10px 16px;">{{ row.status }}</td>
+      <td style="padding:10px 16px;text-align:right;font-weight:600;">{{ row.count }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{# ── Top products ────────────────────────────────────────────────────────── #}
+<h2 style="margin-top:32px;">Top Products by Revenue</h2>
+<table style="width:100%;border-collapse:collapse;background:#fff;border:1px solid #ddd;border-radius:6px;overflow:hidden;">
+  <thead>
+    <tr style="background:#417690;color:#fff;">
+      <th style="padding:10px 16px;text-align:left;">Product</th>
+      <th style="padding:10px 16px;text-align:right;">Units Sold</th>
+      <th style="padding:10px 16px;text-align:right;">Orders</th>
+      <th style="padding:10px 16px;text-align:right;">Revenue (BDT)</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for p in top_products %}
+    <tr style="border-top:1px solid #eee;">
+      <td style="padding:10px 16px;">{{ p.product__name }}</td>
+      <td style="padding:10px 16px;text-align:right;">{{ p.units_sold }}</td>
+      <td style="padding:10px 16px;text-align:right;">{{ p.order_frequency }}</td>
+      <td style="padding:10px 16px;text-align:right;font-weight:600;">{{ p.revenue }}</td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="4" style="padding:16px;text-align:center;color:#999;">No order data yet.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<p style="margin-top:24px;font-size:12px;color:#999;">
+  Stats exclude cancelled orders. Revenue = sum of <code>price_at_purchase</code> per order item.
+</p>
+{% endblock %}
