@@ -163,6 +163,7 @@ AUTH_USER_MODEL = 'users.User'
 
 # CORS
 CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', '').split(',')
+CSRF_TRUSTED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', '').split(',')
 
 # Django REST Framework
 REST_FRAMEWORK = {
