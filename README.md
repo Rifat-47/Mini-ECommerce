@@ -8,7 +8,6 @@ A full-stack e-commerce application with a React frontend and Django REST Framew
 mini_ecommerce/
 ├── mini_ecommerce_frontend/   # React + Vite + Tailwind CSS
 ├── mini_ecommerce_backend/    # Django REST Framework + PostgreSQL
-└── STAGING_DEPLOYMENT.md      # Hosting & migration guide
 ```
 
 ## Documentation
