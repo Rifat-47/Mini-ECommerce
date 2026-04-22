@@ -47,7 +47,6 @@ INSTALLED_APPS = [
     'django_filters',
     'corsheaders',
     'cloudinary',
-    'storages',
 
     # Local apps
     'users',
