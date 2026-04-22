@@ -19,6 +19,7 @@ mini_ecommerce_backend/postman/
 # ── Business docs (keep private) ─────────────────────────
 mini_ecommerce_backend/business docs/
 mini_ecommerce_frontend/docs/
+NEXT_SESSION.md
 
 # ── Staging deployment notes (keep private) ──────────────
 STAGING_DEPLOYMENT.md
