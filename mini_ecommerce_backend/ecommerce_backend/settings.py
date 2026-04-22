@@ -39,7 +39,6 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    'cloudinary_storage',
     'django.contrib.staticfiles',
     # 3rd party apps
     'rest_framework',
@@ -48,6 +47,7 @@ INSTALLED_APPS = [
     'django_filters',
     'corsheaders',
     'cloudinary',
+    'storages',
 
     # Local apps
     'users',
@@ -159,16 +159,17 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-CLOUDINARY_STORAGE = {
-    'CLOUD_NAME': os.environ.get('CLOUDINARY_CLOUD_NAME'),
-    'API_KEY': os.environ.get('CLOUDINARY_API_KEY'),
-    'API_SECRET': os.environ.get('CLOUDINARY_API_SECRET'),
-}
+CLOUDINARY_URL = (
+    f"cloudinary://{os.environ.get('CLOUDINARY_API_KEY')}:"
+    f"{os.environ.get('CLOUDINARY_API_SECRET')}@"
+    f"{os.environ.get('CLOUDINARY_CLOUD_NAME')}"
+    if os.environ.get('CLOUDINARY_CLOUD_NAME') else None
+)
 
 STORAGES = {
     'default': {
         'BACKEND': (
-            'cloudinary_storage.storage.MediaCloudinaryStorage'
+            'storages.backends.cloudinary.CloudinaryStorage'
             if os.environ.get('CLOUDINARY_CLOUD_NAME')
             else 'django.core.files.storage.FileSystemStorage'
         ),
