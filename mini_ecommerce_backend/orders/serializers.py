@@ -215,13 +215,13 @@ class OrderSerializer(serializers.ModelSerializer):
 
             attrs['_coupon'] = coupon
 
-        # Stock validation — aggregate quantities per product to handle duplicates,
-        # use select_for_update to prevent race conditions.
+        # Stock validation — aggregate quantities per product to handle duplicates.
+        # select_for_update is deferred to create() which runs inside a transaction.
         items = attrs.get('items', [])
         product_ids = [item['product'].pk for item in items]
         from catalog.models import Product as ProductModel
-        locked_products = {
-            p.pk: p for p in ProductModel.objects.select_for_update().filter(pk__in=product_ids)
+        products_by_id = {
+            p.pk: p for p in ProductModel.objects.filter(pk__in=product_ids)
         }
         qty_needed = defaultdict(int)
         for item in items:
@@ -229,7 +229,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
         errors = []
         for pid, needed in qty_needed.items():
-            product = locked_products[pid]
+            product = products_by_id[pid]
             if product.stock < needed:
                 errors.append(f"'{product.name}' only has {product.stock} unit(s) in stock.")
         if errors:
@@ -245,9 +245,16 @@ class OrderSerializer(serializers.ModelSerializer):
 
         order = Order.objects.create(user=user, **validated_data)
 
+        # Re-fetch products under lock inside the transaction to prevent race conditions
+        from catalog.models import Product as ProductModel
+        product_ids = [item['product'].pk for item in items_data]
+        locked_products = {
+            p.pk: p for p in ProductModel.objects.select_for_update().filter(pk__in=product_ids)
+        }
+
         subtotal = Decimal('0.00')
         for item_data in items_data:
-            product = item_data['product']
+            product = locked_products[item_data['product'].pk]
             quantity = item_data['quantity']
             unit_price = product.price - (product.price * product.discount_percentage / 100)
             if unit_price < 0:
