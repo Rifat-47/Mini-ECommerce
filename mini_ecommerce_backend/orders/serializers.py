@@ -6,6 +6,7 @@ from django.contrib.auth import get_user_model
 from django.db import transaction
 from .models import Order, OrderItem, Coupon, ReturnRequest
 from catalog.models import Product, Category
+from catalog.serializers import _absolute_url
 from catalog.stock_utils import record_stock_movement
 from cart.models import CartItem
 from users.models import UserAddress
@@ -112,8 +113,8 @@ class OrderItemSerializer(serializers.ModelSerializer):
     def get_product_image(self, obj):
         request = self.context.get('request')
         image = obj.product.images.filter(is_primary=True).first() or obj.product.images.first()
-        if image and request:
-            return request.build_absolute_uri(image.image.url)
+        if image:
+            return _absolute_url(image.image.url, request)
         return None
 
     def validate_quantity(self, value):

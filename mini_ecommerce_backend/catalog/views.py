@@ -161,7 +161,7 @@ class ProductImageDetailView(generics.RetrieveUpdateDestroyAPIView):
 
     def perform_destroy(self, instance):
         was_primary = instance.is_primary
-        instance.image.delete(save=False)  # Remove file from disk
+        instance.image.delete(save=False)
         instance.delete()
         # Auto-promote the oldest remaining image to primary if the deleted one was primary
         if was_primary:

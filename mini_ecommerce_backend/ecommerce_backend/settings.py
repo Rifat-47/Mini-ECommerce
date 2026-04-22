@@ -159,17 +159,18 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-CLOUDINARY_URL = (
-    f"cloudinary://{os.environ.get('CLOUDINARY_API_KEY')}:"
-    f"{os.environ.get('CLOUDINARY_API_SECRET')}@"
-    f"{os.environ.get('CLOUDINARY_CLOUD_NAME')}"
-    if os.environ.get('CLOUDINARY_CLOUD_NAME') else None
-)
+if os.environ.get('CLOUDINARY_CLOUD_NAME'):
+    import cloudinary
+    cloudinary.config(
+        cloud_name=os.environ.get('CLOUDINARY_CLOUD_NAME'),
+        api_key=os.environ.get('CLOUDINARY_API_KEY'),
+        api_secret=os.environ.get('CLOUDINARY_API_SECRET'),
+    )
 
 STORAGES = {
     'default': {
         'BACKEND': (
-            'storages.backends.cloudinary.CloudinaryStorage'
+            'ecommerce_backend.storage.CloudinaryMediaStorage'
             if os.environ.get('CLOUDINARY_CLOUD_NAME')
             else 'django.core.files.storage.FileSystemStorage'
         ),
