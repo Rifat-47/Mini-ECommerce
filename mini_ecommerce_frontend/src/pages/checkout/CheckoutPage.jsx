@@ -287,13 +287,24 @@ export default function CheckoutPage() {
                     </Select>
                   )}
                   <div className="flex gap-2">
-                    <Input
-                      placeholder="Or enter coupon code"
-                      value={couponCode}
-                      onChange={(e) => { setCouponCode(e.target.value); setCouponError(null) }}
-                      onKeyDown={(e) => e.key === 'Enter' && handleCouponApply()}
-                      className="flex-1"
-                    />
+                    <div className="relative flex-1">
+                      <Input
+                        placeholder="Or enter coupon code"
+                        value={couponCode}
+                        onChange={(e) => { setCouponCode(e.target.value); setCouponError(null) }}
+                        onKeyDown={(e) => e.key === 'Enter' && handleCouponApply()}
+                        className={couponCode ? 'pr-8' : ''}
+                      />
+                      {couponCode && (
+                        <button
+                          type="button"
+                          onClick={() => { setCouponCode(''); setCouponError(null) }}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
                     <Button variant="outline" onClick={handleCouponApply} disabled={couponLoading || !couponCode.trim()}>
                       {couponLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Apply'}
                     </Button>

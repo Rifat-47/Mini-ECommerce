@@ -31,6 +31,9 @@ class CouponSerializer(serializers.ModelSerializer):
     def get_user_email(self, obj):
         return obj.user.email if obj.user else None
 
+    def validate_code(self, value):
+        return value.strip().upper()
+
     class Meta:
         model = Coupon
         fields = [
@@ -94,7 +97,7 @@ class CouponValidateSerializer(serializers.Serializer):
         category_ids = set(attrs.get('category_ids', []))
 
         try:
-            coupon = Coupon.objects.prefetch_related('applicable_categories').get(code=code)
+            coupon = Coupon.objects.prefetch_related('applicable_categories').get(code__iexact=code)
         except Coupon.DoesNotExist:
             raise serializers.ValidationError({"code": "Invalid coupon code."})
 
@@ -191,7 +194,7 @@ class OrderSerializer(serializers.ModelSerializer):
         if coupon_code:
             user = self.context['request'].user
             try:
-                coupon = Coupon.objects.prefetch_related('applicable_categories').get(code=coupon_code)
+                coupon = Coupon.objects.prefetch_related('applicable_categories').get(code__iexact=coupon_code)
             except Coupon.DoesNotExist:
                 raise serializers.ValidationError({"coupon_code": "Invalid coupon code."})
 

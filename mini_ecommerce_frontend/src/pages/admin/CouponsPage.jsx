@@ -19,6 +19,7 @@ const EMPTY = {
   code: '', discount_type: 'percentage', discount_value: '', expiry_date: '',
   usage_limit: '', per_user_limit: '', is_active: true, min_order_value: '',
   max_discount_amount: '', first_time_only: false,
+  applicable_categories: [], user: '',
 }
 
 function CouponForm({ initial, onSave, onClose }) {
@@ -33,12 +34,30 @@ function CouponForm({ initial, onSave, onClose }) {
     min_order_value: initial.min_order_value || '',
     max_discount_amount: initial.max_discount_amount || '',
     first_time_only: initial.first_time_only || false,
+    applicable_categories: initial.applicable_categories || [],
+    user: initial.user ?? '',
   } : EMPTY)
+  const [categories, setCategories] = useState([])
+  const [users, setUsers] = useState([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
 
+  useEffect(() => {
+    api.get('/categories/?all=true').then(({ data }) => setCategories(data.results ?? data)).catch(() => {})
+    api.get('/admin/users/?page_size=500').then(({ data }) => setUsers(data.results ?? data)).catch(() => {})
+  }, [])
+
   function field(key) {
     return (e) => setForm(f => ({ ...f, [key]: e.target.value }))
+  }
+
+  function toggleCategory(id) {
+    setForm(f => ({
+      ...f,
+      applicable_categories: f.applicable_categories.includes(id)
+        ? f.applicable_categories.filter(c => c !== id)
+        : [...f.applicable_categories, id],
+    }))
   }
 
   async function handleSubmit(e) {
@@ -47,8 +66,8 @@ function CouponForm({ initial, onSave, onClose }) {
     setSaving(true)
     try {
       const payload = { ...form }
-      // convert empty strings to null for optional numeric fields
-      ;['usage_limit', 'per_user_limit', 'min_order_value', 'max_discount_amount'].forEach(k => {
+      // convert empty strings to null for optional numeric/FK fields
+      ;['usage_limit', 'per_user_limit', 'min_order_value', 'max_discount_amount', 'user'].forEach(k => {
         if (payload[k] === '') payload[k] = null
       })
       initial?.id ? await api.patch(`/admin/coupons/${initial.id}/`, payload) : await api.post('/admin/coupons/', payload)
@@ -113,6 +132,40 @@ function CouponForm({ initial, onSave, onClose }) {
             <Switch id="first_time" checked={form.first_time_only} onCheckedChange={v => setForm(f => ({ ...f, first_time_only: v }))} />
             <Label htmlFor="first_time">First-time only</Label>
           </div>
+        </div>
+        {categories.length > 0 && (
+          <div className="col-span-2 space-y-1.5">
+            <Label>Applicable categories <span className="text-muted-foreground font-normal">(leave empty to apply to all)</span></Label>
+            <div className="flex flex-wrap gap-2 rounded-md border border-border p-2 max-h-32 overflow-y-auto">
+              {categories.map(cat => (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => toggleCategory(cat.id)}
+                  className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors border ${
+                    form.applicable_categories.includes(cat.id)
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'bg-muted text-muted-foreground border-border hover:border-primary'
+                  }`}
+                >
+                  {cat.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        <div className="col-span-2 space-y-1.5">
+          <Label>Assign to user <span className="text-muted-foreground font-normal">(leave empty for public coupon)</span></Label>
+          <select
+            value={form.user ?? ''}
+            onChange={field('user')}
+            className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            <option value="">— Public coupon —</option>
+            {users.map(u => (
+              <option key={u.id} value={u.id}>{u.email}</option>
+            ))}
+          </select>
         </div>
       </div>
       <DialogFooter>
