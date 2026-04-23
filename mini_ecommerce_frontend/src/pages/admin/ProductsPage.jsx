@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Plus, Pencil, Trash2, Search, Download, Loader2, Upload, X } from 'lucide-react'
+import { Plus, Pencil, Trash2, Search, Download, Loader2, Upload, X, Star } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -33,10 +33,45 @@ function ProductForm({ initial, categories, onSave, onClose }) {
     category: initial.category ? String(initial.category) : '',
     status: initial.status || 'active',
   } : EMPTY_FORM)
-  const [images, setImages] = useState([])
+  const [existingImages, setExistingImages] = useState(initial?.images || [])
+  const [newFiles, setNewFiles] = useState([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
   const fileRef = useRef(null)
+
+  const maxNewImages = 5 - existingImages.length
+
+  async function handleTogglePrimary(imageId) {
+    const img = existingImages.find(i => i.id === imageId)
+    const newValue = !img.is_primary
+    try {
+      await api.patch(`/products/${initial.id}/images/${imageId}/`, { is_primary: newValue })
+      setExistingImages(imgs => imgs.map(i => ({
+        ...i,
+        is_primary: newValue ? i.id === imageId : (i.id === imageId ? false : i.is_primary),
+      })))
+      toast.success(newValue ? 'Feature image set.' : 'Feature image removed.')
+    } catch {
+      toast.error('Failed to update feature image.')
+    }
+  }
+
+  async function handleDeleteImage(imageId) {
+    try {
+      await api.delete(`/products/${initial.id}/images/${imageId}/`)
+      setExistingImages(imgs => {
+        const remaining = imgs.filter(img => img.id !== imageId)
+        // if deleted was primary, promote first remaining
+        if (imgs.find(img => img.id === imageId)?.is_primary && remaining.length > 0) {
+          remaining[0].is_primary = true
+        }
+        return remaining
+      })
+      toast.success('Image deleted.')
+    } catch {
+      toast.error('Failed to delete image.')
+    }
+  }
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -48,9 +83,8 @@ function ProductForm({ initial, categories, onSave, onClose }) {
         ? await api.patch(`/products/${initial.id}/`, payload)
         : await api.post('/products/', payload)
 
-      // Upload images if any selected
-      if (images.length > 0) {
-        await Promise.allSettled(images.slice(0, 5).map((file, i) => {
+      if (newFiles.length > 0) {
+        await Promise.allSettled(newFiles.map((file, i) => {
           const fd = new FormData()
           fd.append('image', file)
           if (i === 0 && !initial?.id) fd.append('is_primary', 'true')
@@ -68,8 +102,8 @@ function ProductForm({ initial, categories, onSave, onClose }) {
   }
 
   function handleFiles(e) {
-    const files = Array.from(e.target.files || []).slice(0, 5)
-    setImages(files)
+    const files = Array.from(e.target.files || []).slice(0, maxNewImages)
+    setNewFiles(files)
   }
 
   return (
@@ -116,16 +150,63 @@ function ProductForm({ initial, categories, onSave, onClose }) {
             </SelectContent>
           </Select>
         </div>
-        <div className="col-span-2 space-y-1">
-          <Label>Images (max 5)</Label>
-          <div className="flex items-center gap-2">
-            <Button type="button" variant="outline" size="sm" onClick={() => fileRef.current?.click()}>
-              <Upload className="h-4 w-4 mr-2" /> Choose files
-            </Button>
-            {images.length > 0 && <span className="text-xs text-muted-foreground">{images.length} file(s) selected</span>}
+
+        {/* Existing images (edit mode only) */}
+        {existingImages.length > 0 && (
+          <div className="col-span-2 space-y-1.5">
+            <Label>Images</Label>
+            <div className="flex flex-wrap gap-3">
+              {existingImages.map(img => (
+                <div key={img.id} className="flex flex-col items-center gap-1">
+                  <div className="relative w-20 h-20">
+                    <img src={img.image} alt="" className={`w-full h-full object-cover rounded-md border-2 ${img.is_primary ? 'border-primary' : 'border-border'}`} />
+                    {img.is_primary && (
+                      <span className="absolute -top-1.5 -right-1.5 bg-primary text-primary-foreground rounded-full p-0.5">
+                        <Star className="h-3 w-3 fill-current" />
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      title={img.is_primary ? 'Remove feature' : 'Set as feature'}
+                      onClick={() => handleTogglePrimary(img.id)}
+                      className={`p-1 rounded transition-colors ${img.is_primary ? 'text-primary hover:text-muted-foreground' : 'text-muted-foreground hover:text-primary'}`}
+                    >
+                      <Star className={`h-3.5 w-3.5 ${img.is_primary ? 'fill-current' : ''}`} />
+                    </button>
+                    <button
+                      type="button"
+                      title="Delete image"
+                      onClick={() => handleDeleteImage(img.id)}
+                      className="p-1 rounded text-muted-foreground hover:text-destructive transition-colors"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-          <input ref={fileRef} type="file" multiple accept="image/*" className="hidden" onChange={handleFiles} />
-        </div>
+        )}
+
+        {/* Upload new images */}
+        {maxNewImages > 0 && (
+          <div className="col-span-2 space-y-1">
+            <Label>{existingImages.length > 0 ? `Add more images (${maxNewImages} slot${maxNewImages > 1 ? 's' : ''} left)` : 'Images (max 5)'}</Label>
+            <div className="flex items-center gap-2">
+              <Button type="button" variant="outline" size="sm" onClick={() => fileRef.current?.click()}>
+                <Upload className="h-4 w-4 mr-2" /> Choose files
+              </Button>
+              {newFiles.length > 0 && <span className="text-xs text-muted-foreground">{newFiles.length} file(s) selected</span>}
+            </div>
+            <input ref={fileRef} type="file" multiple accept="image/*" className="hidden" onChange={handleFiles} />
+          </div>
+        )}
+
+        {maxNewImages === 0 && (
+          <p className="col-span-2 text-xs text-muted-foreground">Maximum of 5 images reached. Delete one to upload another.</p>
+        )}
       </div>
       <DialogFooter>
         <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>

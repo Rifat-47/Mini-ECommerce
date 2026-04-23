@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 import ErrorMessage from '@/components/shared/ErrorMessage'
+import DateOfBirthPicker from '@/components/shared/DateOfBirthPicker'
 import api from '@/api/axios'
 import useAuthStore from '@/store/authStore'
 
@@ -35,7 +36,9 @@ function ProfileTab() {
     setError(null)
     setSaving(true)
     try {
-      const { data } = await api.patch('/auth/profile/', form)
+      const payload = { ...form }
+      if (!payload.date_of_birth) payload.date_of_birth = null
+      const { data } = await api.patch('/auth/profile/', payload)
       updateUser({ first_name: data.first_name, last_name: data.last_name })
       toast.success('Profile updated.')
     } catch (err) {
@@ -69,8 +72,11 @@ function ProfileTab() {
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="dob">Date of birth</Label>
-        <Input id="dob" type="date" value={form.date_of_birth} onChange={(e) => setForm((f) => ({ ...f, date_of_birth: e.target.value }))} />
+        <Label>Date of birth</Label>
+        <DateOfBirthPicker
+          initialValue={form.date_of_birth}
+          onChange={val => setForm(f => ({ ...f, date_of_birth: val }))}
+        />
       </div>
 
       <Button type="submit" disabled={saving}>

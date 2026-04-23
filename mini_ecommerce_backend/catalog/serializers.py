@@ -106,12 +106,12 @@ class ReviewSerializer(serializers.ModelSerializer):
         if self.instance is None:
             has_delivered_order = Order.objects.filter(
                 user=request.user,
-                status='Delivered',
+                status__in=['Delivered', 'Return-Requested', 'Return-Approved'],
                 items__product=product
             ).exists()
             if not has_delivered_order:
                 raise serializers.ValidationError(
-                    "You can only review products from your delivered orders."
+                    "You can only review products you have received."
                 )
 
         return attrs

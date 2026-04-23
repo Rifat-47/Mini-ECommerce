@@ -5,6 +5,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from orders.models import Coupon
 from config.models import SiteSettings
+from notifications.utils import notify
 
 User = get_user_model()
 
@@ -80,6 +81,12 @@ class Command(BaseCommand):
                         recipient_list=[user.email],
                         fail_silently=False,
                     )
+                notify(
+                    user,
+                    'birthday',
+                    f'Happy Birthday, {user.first_name or "there"}! 🎂',
+                    f'Wishing you a wonderful birthday! Use code {coupon.code} for {cfg.birthday_coupon_discount}% off — valid until {expiry_str}.',
+                )
                 count += 1
             except Exception as e:
                 self.stdout.write(self.style.ERROR(f'Error processing birthday for {user.email}: {e}'))
