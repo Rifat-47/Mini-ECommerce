@@ -11,7 +11,7 @@ export default defineConfig({
     },
   },
   build: {
-    minify: 'esbuild',
+    minify: 'oxc',
     sourcemap: false,
     chunkSizeWarningLimit: 600,
   },
