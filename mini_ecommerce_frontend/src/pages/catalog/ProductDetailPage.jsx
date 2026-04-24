@@ -126,7 +126,7 @@ export default function ProductDetailPage() {
   if (loading) {
     return (
       <div className="py-8 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto">
-        <div className="grid md:grid-cols-2 gap-10">
+        <div className="grid md:grid-cols-2 gap-6 md:gap-10">
           <Skeleton className="aspect-square rounded-xl" />
           <div className="space-y-4">
             <Skeleton className="h-8 w-3/4" />
@@ -181,7 +181,7 @@ export default function ProductDetailPage() {
           <span className="text-foreground truncate max-w-[200px]">{product.name}</span>
         </nav>
 
-        <div className="grid md:grid-cols-2 gap-10">
+        <div className="grid md:grid-cols-2 gap-6 md:gap-10">
           <ImageGallery images={product.images || []} />
 
           <div className="space-y-5">

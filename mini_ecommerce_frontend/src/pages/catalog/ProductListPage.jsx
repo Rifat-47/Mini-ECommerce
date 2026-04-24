@@ -275,7 +275,7 @@ export default function ProductListPage() {
         {/* Sort + mobile filter */}
         <div className="flex items-center gap-2">
           <Select value={params.sort} onValueChange={(v) => setParam('sort', v)}>
-            <SelectTrigger className="w-44">
+            <SelectTrigger className="w-full sm:w-44">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

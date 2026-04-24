@@ -320,7 +320,7 @@ export default function CheckoutPage() {
                 <CreditCard className="h-4 w-4 text-primary" />
                 Payment Method
               </h2>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <button
                   type="button"
                   onClick={() => setPaymentMethod('online')}
@@ -359,10 +359,10 @@ export default function CheckoutPage() {
 
           {/* Right: order summary */}
           <div className="lg:col-span-2">
-            <div className="bg-card border border-border rounded-xl p-5 space-y-4 sticky top-24">
+            <div className="bg-card border border-border rounded-xl p-5 space-y-4 lg:sticky lg:top-24">
               <h2 className="font-semibold">Order Summary</h2>
 
-              <div className="space-y-2 text-sm max-h-48 overflow-y-auto">
+              <div className="space-y-2 text-sm max-h-32 sm:max-h-48 overflow-y-auto">
                 {items.map((item) => {
                   const disc = parseFloat(item.discount_percentage || 0)
                   const price = parseFloat(item.price)

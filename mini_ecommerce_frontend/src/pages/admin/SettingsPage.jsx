@@ -81,7 +81,7 @@ export default function SettingsPage() {
 
   return (
     <form onSubmit={handleSave} className="p-6 space-y-6 max-w-3xl">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">Site Settings</h1>
           {!isSuperAdmin && (

@@ -3,6 +3,7 @@ import { RouterProvider } from 'react-router-dom'
 import { Toaster } from '@/components/ui/sonner'
 import router from '@/router'
 import useThemeStore from '@/store/themeStore'
+import ErrorBoundary from '@/components/shared/ErrorBoundary'
 
 export default function App() {
   const init = useThemeStore((s) => s.init)
@@ -13,9 +14,9 @@ export default function App() {
   }, [init])
 
   return (
-    <>
+    <ErrorBoundary>
       <RouterProvider router={router} />
       <Toaster theme={theme} richColors position="top-right" />
-    </>
+    </ErrorBoundary>
   )
 }

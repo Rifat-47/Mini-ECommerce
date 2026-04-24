@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Plus, Pencil, Trash2, Search, Download, Loader2, Upload, X, Star } from 'lucide-react'
+import useUnsavedChanges from '@/hooks/useUnsavedChanges.jsx'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -23,7 +24,7 @@ const STATUS_COLORS = {
   inactive: 'bg-muted text-muted-foreground',
 }
 
-function ProductForm({ initial, categories, onSave, onClose }) {
+function ProductForm({ initial, categories, onSave, onClose, markDirty, confirmClose }) {
   const [form, setForm] = useState(initial ? {
     name: initial.name || '',
     description: initial.description || '',
@@ -33,44 +34,49 @@ function ProductForm({ initial, categories, onSave, onClose }) {
     category: initial.category ? String(initial.category) : '',
     status: initial.status || 'active',
   } : EMPTY_FORM)
-  const [existingImages, setExistingImages] = useState(initial?.images || [])
+
+  // Staged image state — no API calls until submit
+  const [existingImages, setExistingImages] = useState(
+    (initial?.images || []).map(img => ({ ...img, _deleted: false }))
+  )
   const [newFiles, setNewFiles] = useState([])
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
   const fileRef = useRef(null)
 
-  const maxNewImages = 5 - existingImages.length
+  const visibleImages = existingImages.filter(img => !img._deleted)
+  const maxNewImages = 5 - visibleImages.length
 
-  async function handleTogglePrimary(imageId) {
-    const img = existingImages.find(i => i.id === imageId)
-    const newValue = !img.is_primary
-    try {
-      await api.patch(`/products/${initial.id}/images/${imageId}/`, { is_primary: newValue })
-      setExistingImages(imgs => imgs.map(i => ({
-        ...i,
-        is_primary: newValue ? i.id === imageId : (i.id === imageId ? false : i.is_primary),
-      })))
-      toast.success(newValue ? 'Feature image set.' : 'Feature image removed.')
-    } catch {
-      toast.error('Failed to update feature image.')
-    }
+  function field(key) {
+    return (e) => { setForm(f => ({ ...f, [key]: e.target.value })); markDirty() }
   }
 
-  async function handleDeleteImage(imageId) {
-    try {
-      await api.delete(`/products/${initial.id}/images/${imageId}/`)
-      setExistingImages(imgs => {
-        const remaining = imgs.filter(img => img.id !== imageId)
-        // if deleted was primary, promote first remaining
-        if (imgs.find(img => img.id === imageId)?.is_primary && remaining.length > 0) {
-          remaining[0].is_primary = true
-        }
-        return remaining
-      })
-      toast.success('Image deleted.')
-    } catch {
-      toast.error('Failed to delete image.')
-    }
+  function handleTogglePrimary(imageId) {
+    setExistingImages(imgs => imgs.map(img => ({
+      ...img,
+      is_primary: img.id === imageId ? !img.is_primary : (img.id !== imageId && !img.is_primary ? img.is_primary : false),
+    })))
+    markDirty()
+  }
+
+  function handleDeleteImage(imageId) {
+    setExistingImages(imgs => {
+      const updated = imgs.map(img => img.id === imageId ? { ...img, _deleted: true, is_primary: false } : img)
+      // if deleted was primary, promote first remaining visible
+      const wasDeleted = imgs.find(img => img.id === imageId)
+      if (wasDeleted?.is_primary) {
+        const firstRemaining = updated.find(img => !img._deleted)
+        if (firstRemaining) firstRemaining.is_primary = true
+      }
+      return updated
+    })
+    markDirty()
+  }
+
+  function handleFiles(e) {
+    const files = Array.from(e.target.files || []).slice(0, maxNewImages)
+    setNewFiles(files)
+    markDirty()
   }
 
   async function handleSubmit(e) {
@@ -83,12 +89,29 @@ function ProductForm({ initial, categories, onSave, onClose }) {
         ? await api.patch(`/products/${initial.id}/`, payload)
         : await api.post('/products/', payload)
 
+      const productId = data.id
+
+      // Apply staged image deletions
+      const toDelete = existingImages.filter(img => img._deleted)
+      await Promise.allSettled(toDelete.map(img => api.delete(`/products/${productId}/images/${img.id}/`)))
+
+      // Apply primary changes on surviving images
+      const primaryChanged = existingImages.filter(img => {
+        if (img._deleted) return false
+        const original = initial?.images?.find(o => o.id === img.id)
+        return original && original.is_primary !== img.is_primary
+      })
+      await Promise.allSettled(primaryChanged.map(img =>
+        api.patch(`/products/${productId}/images/${img.id}/`, { is_primary: img.is_primary })
+      ))
+
+      // Upload new images
       if (newFiles.length > 0) {
         await Promise.allSettled(newFiles.map((file, i) => {
           const fd = new FormData()
           fd.append('image', file)
           if (i === 0 && !initial?.id) fd.append('is_primary', 'true')
-          return api.post(`/products/${data.id}/images/`, fd, { headers: { 'Content-Type': 'multipart/form-data' } })
+          return api.post(`/products/${productId}/images/`, fd, { headers: { 'Content-Type': 'multipart/form-data' } })
         }))
       }
 
@@ -101,121 +124,118 @@ function ProductForm({ initial, categories, onSave, onClose }) {
     }
   }
 
-  function handleFiles(e) {
-    const files = Array.from(e.target.files || []).slice(0, maxNewImages)
-    setNewFiles(files)
-  }
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <ErrorMessage error={error} />
-      <div className="grid grid-cols-2 gap-3">
-        <div className="col-span-2 space-y-1">
-          <Label>Name *</Label>
-          <Input value={form.name} onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))} required />
-        </div>
-        <div className="col-span-2 space-y-1">
-          <Label>Description</Label>
-          <Textarea value={form.description} onChange={(e) => setForm(f => ({ ...f, description: e.target.value }))} rows={3} />
-        </div>
-        <div className="space-y-1">
-          <Label>Price (৳) *</Label>
-          <Input type="number" step="0.01" min="0" value={form.price} onChange={(e) => setForm(f => ({ ...f, price: e.target.value }))} required />
-        </div>
-        <div className="space-y-1">
-          <Label>Discount (%)</Label>
-          <Input type="number" step="0.01" min="0" max="100" value={form.discount_percentage} onChange={(e) => setForm(f => ({ ...f, discount_percentage: e.target.value }))} />
-        </div>
-        <div className="space-y-1">
-          <Label>Stock *</Label>
-          <Input type="number" min="0" value={form.stock} onChange={(e) => setForm(f => ({ ...f, stock: e.target.value }))} required />
-        </div>
-        <div className="space-y-1">
-          <Label>Category</Label>
-          <Select value={form.category || 'none'} onValueChange={(v) => setForm(f => ({ ...f, category: v === 'none' ? '' : v }))}>
-            <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">No category</SelectItem>
-              {categories.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1">
-          <Label>Status</Label>
-          <Select value={form.status} onValueChange={(v) => setForm(f => ({ ...f, status: v }))}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="inactive">Inactive</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Existing images (edit mode only) */}
-        {existingImages.length > 0 && (
-          <div className="col-span-2 space-y-1.5">
-            <Label>Images</Label>
-            <div className="flex flex-wrap gap-3">
-              {existingImages.map(img => (
-                <div key={img.id} className="flex flex-col items-center gap-1">
-                  <div className="relative w-20 h-20">
-                    <img src={img.image} alt="" className={`w-full h-full object-cover rounded-md border-2 ${img.is_primary ? 'border-primary' : 'border-border'}`} />
-                    {img.is_primary && (
-                      <span className="absolute -top-1.5 -right-1.5 bg-primary text-primary-foreground rounded-full p-0.5">
-                        <Star className="h-3 w-3 fill-current" />
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      title={img.is_primary ? 'Remove feature' : 'Set as feature'}
-                      onClick={() => handleTogglePrimary(img.id)}
-                      className={`p-1 rounded transition-colors ${img.is_primary ? 'text-primary hover:text-muted-foreground' : 'text-muted-foreground hover:text-primary'}`}
-                    >
-                      <Star className={`h-3.5 w-3.5 ${img.is_primary ? 'fill-current' : ''}`} />
-                    </button>
-                    <button
-                      type="button"
-                      title="Delete image"
-                      onClick={() => handleDeleteImage(img.id)}
-                      className="p-1 rounded text-muted-foreground hover:text-destructive transition-colors"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Upload new images */}
-        {maxNewImages > 0 && (
+    <>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <ErrorMessage error={error} />
+        <div className="grid grid-cols-2 gap-3">
           <div className="col-span-2 space-y-1">
-            <Label>{existingImages.length > 0 ? `Add more images (${maxNewImages} slot${maxNewImages > 1 ? 's' : ''} left)` : 'Images (max 5)'}</Label>
-            <div className="flex items-center gap-2">
-              <Button type="button" variant="outline" size="sm" onClick={() => fileRef.current?.click()}>
-                <Upload className="h-4 w-4 mr-2" /> Choose files
-              </Button>
-              {newFiles.length > 0 && <span className="text-xs text-muted-foreground">{newFiles.length} file(s) selected</span>}
-            </div>
-            <input ref={fileRef} type="file" multiple accept="image/*" className="hidden" onChange={handleFiles} />
+            <Label>Name *</Label>
+            <Input value={form.name} onChange={field('name')} required />
           </div>
-        )}
+          <div className="col-span-2 space-y-1">
+            <Label>Description</Label>
+            <Textarea value={form.description} onChange={field('description')} rows={3} />
+          </div>
+          <div className="space-y-1">
+            <Label>Price (৳) *</Label>
+            <Input type="number" step="0.01" min="0" value={form.price} onChange={field('price')} required />
+          </div>
+          <div className="space-y-1">
+            <Label>Discount (%)</Label>
+            <Input type="number" step="0.01" min="0" max="100" value={form.discount_percentage} onChange={field('discount_percentage')} />
+          </div>
+          <div className="space-y-1">
+            <Label>Stock *</Label>
+            <Input type="number" min="0" value={form.stock} onChange={field('stock')} required />
+          </div>
+          <div className="space-y-1">
+            <Label>Category</Label>
+            <Select value={form.category || 'none'} onValueChange={(v) => { setForm(f => ({ ...f, category: v === 'none' ? '' : v })); markDirty() }}>
+              <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">No category</SelectItem>
+                {categories.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <Label>Status</Label>
+            <Select value={form.status} onValueChange={(v) => { setForm(f => ({ ...f, status: v })); markDirty() }}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-        {maxNewImages === 0 && (
-          <p className="col-span-2 text-xs text-muted-foreground">Maximum of 5 images reached. Delete one to upload another.</p>
-        )}
-      </div>
-      <DialogFooter>
-        <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-        <Button type="submit" disabled={saving}>
-          {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-          {initial?.id ? 'Update' : 'Create'}
-        </Button>
-      </DialogFooter>
-    </form>
+          {/* Existing images (edit mode only) */}
+          {visibleImages.length > 0 && (
+            <div className="col-span-2 space-y-1.5">
+              <Label>Images</Label>
+              <div className="flex flex-wrap gap-3">
+                {visibleImages.map(img => (
+                  <div key={img.id} className="flex flex-col items-center gap-1">
+                    <div className="relative w-20 h-20">
+                      <img src={img.image} alt="" className={`w-full h-full object-cover rounded-md border-2 ${img.is_primary ? 'border-primary' : 'border-border'}`} />
+                      {img.is_primary && (
+                        <span className="absolute -top-1.5 -right-1.5 bg-primary text-primary-foreground rounded-full p-0.5">
+                          <Star className="h-3 w-3 fill-current" />
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        title={img.is_primary ? 'Remove feature' : 'Set as feature'}
+                        onClick={() => handleTogglePrimary(img.id)}
+                        className={`p-1 rounded transition-colors ${img.is_primary ? 'text-primary hover:text-muted-foreground' : 'text-muted-foreground hover:text-primary'}`}
+                      >
+                        <Star className={`h-3.5 w-3.5 ${img.is_primary ? 'fill-current' : ''}`} />
+                      </button>
+                      <button
+                        type="button"
+                        title="Delete image"
+                        onClick={() => handleDeleteImage(img.id)}
+                        className="p-1 rounded text-muted-foreground hover:text-destructive transition-colors"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Upload new images */}
+          {maxNewImages > 0 && (
+            <div className="col-span-2 space-y-1">
+              <Label>{visibleImages.length > 0 ? `Add more images (${maxNewImages} slot${maxNewImages > 1 ? 's' : ''} left)` : 'Images (max 5)'}</Label>
+              <div className="flex items-center gap-2">
+                <Button type="button" variant="outline" size="sm" onClick={() => fileRef.current?.click()}>
+                  <Upload className="h-4 w-4 mr-2" /> Choose files
+                </Button>
+                {newFiles.length > 0 && <span className="text-xs text-muted-foreground">{newFiles.length} file(s) selected</span>}
+              </div>
+              <input ref={fileRef} type="file" multiple accept="image/*" className="hidden" onChange={handleFiles} />
+            </div>
+          )}
+
+          {maxNewImages === 0 && (
+            <p className="col-span-2 text-xs text-muted-foreground">Maximum of 5 images reached. Delete one to upload another.</p>
+          )}
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => confirmClose(onClose)}>Cancel</Button>
+          <Button type="submit" disabled={saving}>
+            {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            {initial?.id ? 'Update' : 'Create'}
+          </Button>
+        </DialogFooter>
+      </form>
+    </>
   )
 }
 
@@ -275,6 +295,7 @@ export default function ProductsPage() {
   const [stockProduct, setStockProduct] = useState(null)
   const [selected, setSelected] = useState(new Set())
   const [bulkLoading, setBulkLoading] = useState(false)
+  const { markDirty, confirmClose, DiscardDialog, reset } = useUnsavedChanges()
 
   const page = parseInt(searchParams.get('page') || '1')
 
@@ -353,13 +374,13 @@ export default function ProductsPage() {
         <h1 className="text-2xl font-bold">Products</h1>
         <div className="flex items-center gap-2 flex-wrap">
           <Button variant="outline" size="sm" onClick={handleExport}><Download className="h-4 w-4 mr-1.5" />Export CSV</Button>
-          <Button size="sm" onClick={() => { setEditProduct(null); setShowForm(true) }}><Plus className="h-4 w-4 mr-1.5" />Add Product</Button>
+          <Button size="sm" onClick={() => { reset(); setEditProduct(null); setShowForm(true) }}><Plus className="h-4 w-4 mr-1.5" />Add Product</Button>
         </div>
       </div>
 
       {/* Search + category filter */}
       <div className="flex flex-wrap gap-2">
-        <form onSubmit={handleSearchSubmit} className="flex gap-2 flex-1 min-w-[200px]">
+        <form onSubmit={handleSearchSubmit} className="flex gap-2 flex-1 min-w-0 w-full sm:w-auto">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
             <Input placeholder="Search products..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9 h-9" />
@@ -367,7 +388,7 @@ export default function ProductsPage() {
           <Button type="submit" size="sm" variant="outline">Search</Button>
         </form>
         <Select value={searchParams.get('category') || 'all'} onValueChange={v => setParam('category', v === 'all' ? '' : v)}>
-          <SelectTrigger className="w-36 h-9"><SelectValue placeholder="Category" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-36 h-9"><SelectValue placeholder="Category" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All categories</SelectItem>
             {categories.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}
@@ -424,7 +445,7 @@ export default function ProductsPage() {
                         <button onClick={() => setStockProduct(p)} className="p-1.5 text-muted-foreground hover:text-foreground transition-colors" title="Adjust stock">
                           <span className="text-xs font-bold">±</span>
                         </button>
-                        <button onClick={() => { setEditProduct(p); setShowForm(true) }} className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"><Pencil className="h-3.5 w-3.5" /></button>
+                        <button onClick={() => { reset(); setEditProduct(p); setShowForm(true) }} className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"><Pencil className="h-3.5 w-3.5" /></button>
                         <button onClick={() => setDeleteId(p.id)} className="p-1.5 text-muted-foreground hover:text-destructive transition-colors"><Trash2 className="h-3.5 w-3.5" /></button>
                       </div>
                     </TableCell>
@@ -438,10 +459,11 @@ export default function ProductsPage() {
       )}
 
       {/* Product form dialog */}
-      <Dialog open={showForm} onOpenChange={(o) => { if (!o) { setShowForm(false); setEditProduct(null) } }}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+      <DiscardDialog />
+      <Dialog open={showForm} onOpenChange={(o) => { if (!o) confirmClose(() => { setShowForm(false); setEditProduct(null) }) }}>
+        <DialogContent className="max-w-[95vw] sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{editProduct ? 'Edit Product' : 'Add Product'}</DialogTitle></DialogHeader>
-          <ProductForm initial={editProduct} categories={categories} onSave={() => { setShowForm(false); setEditProduct(null); fetchProducts() }} onClose={() => { setShowForm(false); setEditProduct(null) }} />
+          <ProductForm initial={editProduct} categories={categories} onSave={() => { setShowForm(false); setEditProduct(null); fetchProducts() }} onClose={() => { setShowForm(false); setEditProduct(null) }} markDirty={markDirty} confirmClose={confirmClose} />
         </DialogContent>
       </Dialog>
 

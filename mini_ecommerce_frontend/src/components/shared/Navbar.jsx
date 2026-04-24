@@ -225,7 +225,7 @@ export default function Navbar() {
 
                 {/* Notification panel */}
                 {notifOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-popover border border-border rounded-xl shadow-lg z-50 overflow-hidden">
+                  <div className="fixed sm:absolute inset-x-2 sm:inset-x-auto top-[4.5rem] sm:top-full sm:right-0 sm:mt-2 sm:w-96 bg-popover border border-border rounded-xl shadow-lg z-50 overflow-hidden">
                     {/* Header */}
                     <div className="flex items-center justify-between px-4 py-3 border-b border-border">
                       <span className="font-semibold text-sm">Notifications</span>
@@ -249,7 +249,7 @@ export default function Navbar() {
                     </div>
 
                     {/* Body */}
-                    <div className="max-h-96 overflow-y-auto">
+                    <div className="max-h-[60vh] sm:max-h-96 overflow-y-auto">
                       {isLoading ? (
                         <div className="py-10 text-center text-sm text-muted-foreground">Loading...</div>
                       ) : notifications.length === 0 ? (

@@ -54,7 +54,7 @@ export default function AuditLogPage() {
 
       <div className="flex flex-wrap gap-2">
         <Select value={actionFilter || 'all'} onValueChange={v => setParam('action', v === 'all' ? '' : v)}>
-          <SelectTrigger className="w-48 h-9"><SelectValue placeholder="Filter by action" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-48 h-9"><SelectValue placeholder="Filter by action" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All actions</SelectItem>
             <SelectItem value="create">Create</SelectItem>
@@ -69,7 +69,7 @@ export default function AuditLogPage() {
             placeholder="Filter by admin ID..."
             value={adminIdInput}
             onChange={e => setAdminIdInput(e.target.value)}
-            className="h-9 w-44"
+            className="h-9 w-full sm:w-44"
           />
         </form>
       </div>
