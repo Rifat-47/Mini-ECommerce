@@ -159,7 +159,7 @@ export default function ProductListPage() {
       if (params.page && params.page !== '1') query.set('page', params.page)
 
       const { data } = await api.get(`/products/?${query}`)
-      setProducts(data.results)
+      setProducts(data.results ?? [])
       setPagination({ count: data.count, next: data.next, previous: data.previous })
     } catch {
       setProducts([])
