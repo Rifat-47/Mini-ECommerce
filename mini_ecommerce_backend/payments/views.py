@@ -1,5 +1,5 @@
 from django.conf import settings
-from django.core.mail import send_mail
+from ecommerce_backend.email_utils import send_mail_async as _send_async
 from django.shortcuts import redirect
 from rest_framework import permissions, status
 from rest_framework.response import Response
@@ -137,7 +137,7 @@ class PaymentCallbackView(APIView):
         cfg = SiteSettings.get()
         if not cfg.email_notifications_enabled:
             return
-        send_mail(
+        _send_async(
             f'Payment Confirmed — Order #{order.id}',
             (
                 f'Hi {order.user.first_name or order.user.email},\n\n'
@@ -149,7 +149,6 @@ class PaymentCallbackView(APIView):
             ),
             cfg.from_email,
             [order.user.email],
-            fail_silently=True,
         )
 
     def _redirect_url(self, payment):
@@ -253,7 +252,7 @@ class CashOnDeliveryView(APIView):
         order.save(update_fields=['status'])
 
         if order.user and cfg.email_notifications_enabled:
-            send_mail(
+            _send_async(
                 f'Order Confirmed (Cash on Delivery) — #{order.id}',
                 (
                     f'Hi {order.user.first_name or order.user.email},\n\n'
@@ -263,7 +262,6 @@ class CashOnDeliveryView(APIView):
                 ),
                 cfg.from_email,
                 [order.user.email],
-                fail_silently=True,
             )
             notify(order.user, 'order_placed',
                    f'Order #{order.id} Confirmed — Cash on Delivery',

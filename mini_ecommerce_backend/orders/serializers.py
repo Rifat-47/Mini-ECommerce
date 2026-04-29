@@ -1,7 +1,6 @@
 from collections import defaultdict
 from decimal import Decimal
 from rest_framework import serializers
-from django.core.mail import send_mail
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from .models import Order, OrderItem, Coupon, ReturnRequest
@@ -11,6 +10,7 @@ from catalog.stock_utils import record_stock_movement
 from cart.models import CartItem
 from users.models import UserAddress
 from notifications.utils import notify
+from ecommerce_backend.email_utils import send_mail_async as _email_async
 
 User = get_user_model()
 
@@ -321,8 +321,10 @@ class OrderSerializer(serializers.ModelSerializer):
         def _send_confirmation():
             from config.models import SiteSettings
             cfg = SiteSettings.get()
+            notify(user, 'order_placed', f'Order #{order_id} Placed',
+                   f'Your order #{order_id} has been placed successfully! Total: BDT {order_total}.')
             if cfg.email_notifications_enabled:
-                send_mail(
+                _email_async(
                     'Order Confirmation',
                     (
                         f'Hi {user_name},\n\n'
@@ -332,10 +334,7 @@ class OrderSerializer(serializers.ModelSerializer):
                     ),
                     cfg.from_email,
                     [user_email],
-                    fail_silently=True,
                 )
-            notify(user, 'order_placed', f'Order #{order_id} Placed',
-                   f'Your order #{order_id} has been placed successfully! Total: BDT {order_total}.')
 
         # Run email + notification after the transaction commits so that:
         # 1. DB locks on products/order are released before SMTP starts.
@@ -408,7 +407,7 @@ class AdminOrderUpdateSerializer(serializers.ModelSerializer):
             cfg = SiteSettings.get()
             if cfg.email_notifications_enabled:
                 template = STATUS_EMAIL_TEMPLATES[new_status]
-                send_mail(
+                _email_async(
                     template['subject'].format(order_id=instance.id),
                     template['body'].format(
                         name=_user_name(instance.user),
@@ -418,7 +417,6 @@ class AdminOrderUpdateSerializer(serializers.ModelSerializer):
                     ),
                     cfg.from_email,
                     [instance.user.email],
-                    fail_silently=True,
                 )
 
         if status_changed:
@@ -470,7 +468,7 @@ class AdminReturnUpdateSerializer(serializers.ModelSerializer):
                     from config.models import SiteSettings
                     cfg = SiteSettings.get()
                     if cfg.email_notifications_enabled:
-                        send_mail(
+                        _email_async(
                             f'Your Return Request Has Been Approved — Order #{order.id}',
                             (
                                 f'Hi {_user_name(order.user)},\n\n'
@@ -481,7 +479,6 @@ class AdminReturnUpdateSerializer(serializers.ModelSerializer):
                             ),
                             cfg.from_email,
                             [order.user.email],
-                            fail_silently=True,
                         )
                     notify(order.user, 'return_approved', f'Return Approved — Order #{order.id}',
                            f'Your return request for Order #{order.id} has been approved. Refund is being processed.')
@@ -493,7 +490,7 @@ class AdminReturnUpdateSerializer(serializers.ModelSerializer):
                     from config.models import SiteSettings
                     cfg = SiteSettings.get()
                     if cfg.email_notifications_enabled:
-                        send_mail(
+                        _email_async(
                             f'Your Return Request Has Been Rejected — Order #{order.id}',
                             (
                                 f'Hi {_user_name(order.user)},\n\n'
@@ -504,7 +501,6 @@ class AdminReturnUpdateSerializer(serializers.ModelSerializer):
                             ),
                             cfg.from_email,
                             [order.user.email],
-                            fail_silently=True,
                         )
                     notify(order.user, 'return_rejected', f'Return Rejected — Order #{order.id}',
                            f'Your return request for Order #{order.id} has been rejected. Reason: {instance.admin_note or "No reason provided."}')
