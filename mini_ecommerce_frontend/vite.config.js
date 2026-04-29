@@ -14,5 +14,6 @@ export default defineConfig({
     minify: 'oxc',
     sourcemap: false,
     chunkSizeWarningLimit: 600,
+    modulePreload: false,
   },
 })
