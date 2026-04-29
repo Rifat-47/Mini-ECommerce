@@ -3,6 +3,7 @@ import { useSearchParams, Link } from 'react-router-dom'
 import { CheckCircle2, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import api from '@/api/axios'
+import useCartStore from '@/store/cartStore'
 
 export default function PaymentSuccessPage() {
   const [searchParams] = useSearchParams()
@@ -10,8 +11,15 @@ export default function PaymentSuccessPage() {
   const isCod = searchParams.get('method') === 'cod'
   const [order, setOrder] = useState(null)
   const [loading, setLoading] = useState(true)
+  const clearCart = useCartStore((s) => s.clearCart)
 
   useEffect(() => {
+    // For online payments the app does a full-page redirect to ShurjoPay and back,
+    // so the in-memory cart store is lost. Clear here to ensure localStorage is wiped.
+    // For COD the checkout page already cleared the cart before navigating, but
+    // calling clearCart() again is a safe no-op.
+    clearCart()
+
     if (!orderId) { setLoading(false); return }
     api.get(`/orders/${orderId}/`).then(({ data }) => setOrder(data)).catch(() => {}).finally(() => setLoading(false))
   }, [orderId])

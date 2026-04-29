@@ -110,8 +110,8 @@ export default function CheckoutPage() {
   const finalTotal = couponResult?.final_total ? parseFloat(couponResult.final_total) : subtotal
 
   useEffect(() => {
-    if (items.length === 0) navigate('/cart', { replace: true })
-  }, [items, navigate])
+    if (items.length === 0 && !placing) navigate('/cart', { replace: true })
+  }, [items, navigate, placing])
 
   useEffect(() => {
     api.get('/addresses/').then(({ data }) => {
@@ -158,6 +158,9 @@ export default function CheckoutPage() {
     if (!selectedAddressId) { setError({ error: 'Please select a shipping address.' }); return }
     setError(null)
     setPlacing(true)
+
+    // Step 1: create the order
+    let order
     try {
       const orderItems = items.map((i) => ({ product: i.product_id, quantity: i.quantity }))
       const body = {
@@ -165,19 +168,31 @@ export default function CheckoutPage() {
         items: orderItems,
         ...(couponResult ? { coupon_code: couponCode } : {}),
       }
-      const { data: order } = await api.post('/orders/', body)
-      clearCart()
+      const { data } = await api.post('/orders/', body)
+      order = data
+    } catch (err) {
+      setError(err.response?.data || { error: 'Failed to place order. Please try again.' })
+      setPlacing(false)
+      return
+    }
 
+    // Step 2: confirm payment — only clear the cart after this succeeds
+    try {
       if (paymentMethod === 'cod') {
         await api.post('/payments/cod/', { order_id: order.id })
+        clearCart()
         navigate(`/payment/success?order_id=${order.id}&method=cod`, { replace: true })
       } else {
         const { data: payment } = await api.post('/payments/initiate/', { order_id: order.id })
+        clearCart()
         window.location.href = payment.checkout_url
       }
     } catch (err) {
-      setError(err.response?.data || { error: 'Failed to place order. Please try again.' })
-    } finally {
+      setError(
+        err.response?.data || {
+          error: 'Your order was placed but payment could not be initiated. Go to My Orders to retry payment.',
+        },
+      )
       setPlacing(false)
     }
   }
