@@ -33,7 +33,7 @@
 | # | Issue | File | Fix |
 |---|-------|------|-----|
 | 7 | ~~**CORS/CSRF config**~~ — **FIXED.** `CSRF_TRUSTED_ORIGINS` now uses its own env var. Both use list comprehension to filter empty strings, producing `[]` instead of `['']` when unset. `.env.example` updated. | `mini_ecommerce_backend/ecommerce_backend/settings.py` | ✅ Fixed |
-| 8 | **APScheduler is single-instance only** — Birthday emails and low-stock alerts will be skipped if server restarts or scales to multiple workers | `mini_ecommerce_backend/users/scheduler.py` | Acceptable for single-server deploy; document the limitation. Migrate to Celery+Redis for multi-instance |
+| 8 | ~~**APScheduler is single-instance only**~~ — **FIXED.** Removed APScheduler entirely. Birthday emails and low-stock alerts now run as Render Cron Jobs (`5 0 * * *` and `0 12 * * *`), fully decoupled from the web process. No more worker timeouts or duplicate job runs. | `mini_ecommerce_backend/users/scheduler.py` (deleted) | ✅ Fixed |
 
 ### Frontend
 
@@ -52,7 +52,7 @@
 | 12 | **Backend tests** | All test files are empty stubs — zero test coverage for auth, orders, payments, catalog | `mini_ecommerce_backend/*/tests.py` |
 | 13 | **Frontend tests** | No test framework installed, no tests at all | `mini_ecommerce_frontend/` |
 | 14 | **Bundle size** | Main JS bundle is 243 KB — acceptable now but worth monitoring as features grow | `mini_ecommerce_frontend/dist/` |
-| 15 | **APScheduler → Celery** | If traffic grows and multiple workers are needed, background jobs need a proper task queue | `mini_ecommerce_backend/users/scheduler.py` |
+| 15 | **Celery for complex task queuing** | If background jobs grow beyond simple daily cron (e.g. per-order async processing, retries, chaining), migrate from Render Cron Jobs to Celery+Redis | N/A |
 
 ---
 
