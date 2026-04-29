@@ -244,6 +244,10 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
 DEFAULT_FROM_EMAIL = os.environ.get('EMAIL_HOST_USER')
+# Cap SMTP socket connection at 10 s. Without this Django has no timeout, so a
+# slow or unresponsive Gmail connection blocks the request thread indefinitely
+# and triggers gunicorn's 30 s worker timeout — killing the request mid-flight.
+EMAIL_TIMEOUT = 10
 
 # ShurjoPay
 SHURJOPAY_BASE_URL = os.environ.get('SHURJOPAY_BASE_URL', 'https://sandbox.shurjopayment.com')

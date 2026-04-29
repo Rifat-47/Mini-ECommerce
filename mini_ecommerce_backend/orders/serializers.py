@@ -311,23 +311,36 @@ class OrderSerializer(serializers.ModelSerializer):
         # Clear the user's cart after successful checkout
         CartItem.objects.filter(user=user).delete()
 
-        from config.models import SiteSettings
-        cfg = SiteSettings.get()
-        if cfg.email_notifications_enabled:
-            send_mail(
-                'Order Confirmation',
-                (
-                    f'Hi {user.first_name or user.email},\n\n'
-                    f'Your order #{order.id} has been placed successfully!\n'
-                    f'Total: {cfg.currency} {order.total_amount}\n\n'
-                    f'— The {cfg.store_name} Team'
-                ),
-                cfg.from_email,
-                [user.email],
-                fail_silently=True,
-            )
-        notify(user, 'order_placed', f'Order #{order.id} Placed',
-               f'Your order #{order.id} has been placed successfully! Total: BDT {order.total_amount}.')
+        # Capture values needed by the post-commit callback before the
+        # transaction closes (avoids lazy-loading on a potentially stale instance).
+        order_id = order.id
+        order_total = order.total_amount
+        user_email = user.email
+        user_name = user.first_name or user.email
+
+        def _send_confirmation():
+            from config.models import SiteSettings
+            cfg = SiteSettings.get()
+            if cfg.email_notifications_enabled:
+                send_mail(
+                    'Order Confirmation',
+                    (
+                        f'Hi {user_name},\n\n'
+                        f'Your order #{order_id} has been placed successfully!\n'
+                        f'Total: {cfg.currency} {order_total}\n\n'
+                        f'— The {cfg.store_name} Team'
+                    ),
+                    cfg.from_email,
+                    [user_email],
+                    fail_silently=True,
+                )
+            notify(user, 'order_placed', f'Order #{order_id} Placed',
+                   f'Your order #{order_id} has been placed successfully! Total: BDT {order_total}.')
+
+        # Run email + notification after the transaction commits so that:
+        # 1. DB locks on products/order are released before SMTP starts.
+        # 2. If the transaction rolls back, no confirmation is sent.
+        transaction.on_commit(_send_confirmation)
 
         return order
 
