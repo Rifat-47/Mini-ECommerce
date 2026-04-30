@@ -3,7 +3,7 @@ from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.tokens import default_token_generator
 from django.core.cache import cache
 from django.core.exceptions import ValidationError as DjangoValidationError
-from django.core.mail import send_mail
+from ecommerce_backend.email_utils import send_mail_async as _send_mail_async
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 
@@ -201,15 +201,14 @@ class CustomerForgotPasswordView(views.APIView):
             reset_link = f"{frontend_url}/{store.slug}/auth/reset-password/{uid}/{token}/"
 
             if store.settings.email_notifications_enabled:
-                send_mail(
-                    subject='Password Reset Request',
-                    message=(
+                _send_mail_async(
+                    'Password Reset Request',
+                    (
                         f'Click the link below to reset your password:\n\n'
                         f'{reset_link}\n\nThis link expires in 24 hours.'
                     ),
-                    from_email=django_settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=[customer.email],
-                    fail_silently=False,
+                    django_settings.DEFAULT_FROM_EMAIL,
+                    [customer.email],
                 )
         except Customer.DoesNotExist:
             pass  # Don't reveal whether the email exists

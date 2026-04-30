@@ -249,6 +249,14 @@ DEFAULT_FROM_EMAIL = os.environ.get('EMAIL_HOST_USER')
 # and triggers gunicorn's 30 s worker timeout — killing the request mid-flight.
 EMAIL_TIMEOUT = 10
 
+# Resend — HTTP-based email delivery (replaces Gmail SMTP, which Render free tier blocks).
+# Sign up at resend.com, create an API key, and set it here.
+# RESEND_FROM_EMAIL: use 'onboarding@resend.dev' for testing (Resend sandbox);
+#   for production set a verified sender address from your own domain.
+# When RESEND_API_KEY is blank the app falls back to Django SMTP (works locally).
+RESEND_API_KEY   = os.environ.get('RESEND_API_KEY', '')
+RESEND_FROM_EMAIL = os.environ.get('RESEND_FROM_EMAIL', 'onboarding@resend.dev')
+
 # Cron — secret token checked by /api/internal/cron/* endpoints.
 # Generate with: python -c "import secrets; print(secrets.token_urlsafe(40))"
 # Set the same value in cron-job.org as the Authorization Bearer token.

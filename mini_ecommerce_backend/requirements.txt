@@ -24,3 +24,4 @@ tzlocal==5.3.1
 urllib3==2.6.3
 whitenoise==6.9.0
 cloudinary==1.42.1
+resend>=2.0.0

@@ -13,7 +13,7 @@ from .permissions import IsAdminOrSuperAdmin, IsSuperAdmin
 from .audit_utils import audit
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
-from django.core.mail import send_mail
+from ecommerce_backend.email_utils import send_mail_async as _send_mail_async
 from django.contrib.auth.tokens import default_token_generator
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
@@ -152,25 +152,23 @@ class ForgotPasswordView(views.APIView):
 
         try:
             user = User.objects.get(email=email)
-            uid = urlsafe_base64_encode(force_bytes(user.pk))
-            token = default_token_generator.make_token(user)
-            # Points to the frontend reset-password page; frontend calls
-            # POST /api/auth/reset-password/<uid>/<token>/ to confirm.
-            from django.conf import settings as django_settings
-            reset_link = f"{django_settings.FRONTEND_URL}/reset-password/{uid}/{token}/"
-
-            from config.models import SiteSettings
-            cfg = SiteSettings.get()
-            if cfg.email_notifications_enabled:
-                send_mail(
-                    'Password Reset Request',
-                    f'Click the link below to reset your password:\n\n{reset_link}\n\nThis link expires in 24 hours.',
-                    cfg.from_email,
-                    [user.email],
-                    fail_silently=False,
-                )
         except User.DoesNotExist:
-            pass
+            return Response({'message': 'If an account with that email exists, a password reset link has been sent.'}, status=status.HTTP_200_OK)
+
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        token = default_token_generator.make_token(user)
+        from django.conf import settings as django_settings
+        reset_link = f"{django_settings.FRONTEND_URL}/reset-password/{uid}/{token}/"
+
+        from config.models import SiteSettings
+        cfg = SiteSettings.get()
+        if cfg.email_notifications_enabled:
+            _send_mail_async(
+                'Password Reset Request',
+                f'Click the link below to reset your password:\n\n{reset_link}\n\nThis link expires in 24 hours.',
+                cfg.from_email,
+                [user.email],
+            )
 
         return Response({'message': 'If an account with that email exists, a password reset link has been sent.'}, status=status.HTTP_200_OK)
 

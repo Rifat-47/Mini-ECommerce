@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
-from django.core.mail import send_mail
+from ecommerce_backend.email_utils import send_email as _send_email
 from django.db.models import Sum, Count
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode
@@ -32,7 +32,7 @@ def _send_owner_invite(user, store):
     frontend_url = getattr(django_settings, 'PLATFORM_FRONTEND_URL', django_settings.FRONTEND_URL)
     reset_link = f"{frontend_url}/auth/reset-password/{uid}/{token}/?store={store.slug}"
 
-    send_mail(
+    _send_email(
         subject=f"You've been invited to manage {store.name}",
         message=(
             f"Hello,\n\n"
@@ -42,9 +42,8 @@ def _send_owner_invite(user, store):
             f"After setting your password, log in to access your store's admin panel.\n\n"
             f"— The Platform Team"
         ),
-        from_email=django_settings.DEFAULT_FROM_EMAIL,
         recipient_list=[user.email],
-        fail_silently=False,
+        from_email=django_settings.DEFAULT_FROM_EMAIL,
     )
 
 
