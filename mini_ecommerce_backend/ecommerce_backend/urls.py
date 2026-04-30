@@ -28,6 +28,7 @@ urlpatterns = [
     path('api/', include('payments.urls')),
     path('api/', include('notifications.urls')),
     path('api/', include('config.urls')),
+    path('api/', include('ecommerce_backend.cron_urls')),
 ]
 
 if settings.DEBUG:

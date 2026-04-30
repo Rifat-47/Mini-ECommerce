@@ -249,6 +249,11 @@ DEFAULT_FROM_EMAIL = os.environ.get('EMAIL_HOST_USER')
 # and triggers gunicorn's 30 s worker timeout — killing the request mid-flight.
 EMAIL_TIMEOUT = 10
 
+# Cron — secret token checked by /api/internal/cron/* endpoints.
+# Generate with: python -c "import secrets; print(secrets.token_urlsafe(40))"
+# Set the same value in cron-job.org as the Authorization Bearer token.
+CRON_SECRET = os.environ.get('CRON_SECRET', '')
+
 # ShurjoPay
 SHURJOPAY_BASE_URL = os.environ.get('SHURJOPAY_BASE_URL', 'https://sandbox.shurjopayment.com')
 SHURJOPAY_USERNAME = os.environ.get('SHURJOPAY_USERNAME', '')
