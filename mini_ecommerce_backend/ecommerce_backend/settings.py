@@ -304,5 +304,10 @@ LOGGING = {
             'level': 'WARNING',
             'propagate': False,
         },
+        'ecommerce_backend.email_utils': {
+            'handlers': ['console', 'file'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
     },
 }

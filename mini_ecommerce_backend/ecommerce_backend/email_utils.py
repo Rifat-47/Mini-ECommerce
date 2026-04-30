@@ -1,5 +1,8 @@
+import logging
 import threading
 from django.core.mail import send_mail as _send_mail
+
+logger = logging.getLogger(__name__)
 
 
 def send_mail_async(subject, message, from_email, recipient_list):
@@ -15,9 +18,9 @@ def send_mail_async(subject, message, from_email, recipient_list):
     """
     def _send():
         try:
-            _send_mail(subject, message, from_email, recipient_list, fail_silently=True)
-        except Exception:
-            pass
+            _send_mail(subject, message, from_email, recipient_list, fail_silently=False)
+        except Exception as exc:
+            logger.error('send_mail_async failed — subject=%r to=%r: %s', subject, recipient_list, exc)
 
     threading.Thread(target=_send, daemon=True).start()
 
@@ -35,8 +38,8 @@ def send_mail_with_pdf_async(subject, message, from_email, recipient_list, pdf_b
             from django.core.mail import EmailMessage
             msg = EmailMessage(subject, message, from_email, recipient_list)
             msg.attach(pdf_filename, pdf_bytes, 'application/pdf')
-            msg.send(fail_silently=True)
-        except Exception:
-            pass
+            msg.send(fail_silently=False)
+        except Exception as exc:
+            logger.error('send_mail_with_pdf_async failed — subject=%r to=%r: %s', subject, recipient_list, exc)
 
     threading.Thread(target=_send, daemon=True).start()
