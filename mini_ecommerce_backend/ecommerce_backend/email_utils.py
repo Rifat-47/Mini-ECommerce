@@ -20,3 +20,23 @@ def send_mail_async(subject, message, from_email, recipient_list):
             pass
 
     threading.Thread(target=_send, daemon=True).start()
+
+
+def send_mail_with_pdf_async(subject, message, from_email, recipient_list, pdf_buffer, pdf_filename):
+    """Fire-and-forget email with a single PDF attachment.
+
+    pdf_buffer is read synchronously before the thread starts so the caller
+    does not need to keep the BytesIO object alive.
+    """
+    pdf_bytes = pdf_buffer.read()
+
+    def _send():
+        try:
+            from django.core.mail import EmailMessage
+            msg = EmailMessage(subject, message, from_email, recipient_list)
+            msg.attach(pdf_filename, pdf_bytes, 'application/pdf')
+            msg.send(fail_silently=True)
+        except Exception:
+            pass
+
+    threading.Thread(target=_send, daemon=True).start()

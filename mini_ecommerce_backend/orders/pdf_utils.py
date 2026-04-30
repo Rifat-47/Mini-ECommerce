@@ -16,6 +16,7 @@ ACCENT    = colors.HexColor('#e94560')
 PAID_CLR  = colors.HexColor('#16a34a')
 UNPAID_CLR= colors.HexColor('#dc2626')
 REFUND_CLR= colors.HexColor('#2563eb')
+COD_CLR   = colors.HexColor('#d97706')
 LIGHT_BG  = colors.HexColor('#f8f8f8')
 MID_GREY  = colors.HexColor('#6b7280')
 DARK_GREY = colors.HexColor('#374151')
@@ -134,12 +135,17 @@ def generate_invoice(order):
     styles = _base_styles()
     story = []
 
-    # Determine payment status
-    is_paid = (
-        hasattr(order, 'payment') and order.payment.status == 'completed'
-    )
-    status_text  = 'PAID' if is_paid else 'UNPAID'
-    status_color = PAID_CLR if is_paid else UNPAID_CLR
+    # Determine payment status badge
+    payment = getattr(order, 'payment', None)
+    is_paid = payment is not None and payment.status == 'completed'
+    is_cod  = payment is not None and payment.payment_method == 'cash_on_delivery'
+
+    if is_paid:
+        status_text, status_color = 'PAID', PAID_CLR
+    elif is_cod:
+        status_text, status_color = 'CASH ON DELIVERY', COD_CLR
+    else:
+        status_text, status_color = 'UNPAID', UNPAID_CLR
 
     # ── Header ───────────────────────────────────────────────────────────────
     from config.models import SiteSettings
@@ -171,12 +177,12 @@ def generate_invoice(order):
          Paragraph('Order Status', styles['Label']),
          Paragraph(order.status, styles['Value'])],
     ]
-    if is_paid and hasattr(order, 'payment'):
+    if payment is not None:
         meta_data.append([
             Paragraph('Payment Method', styles['Label']),
-            Paragraph(order.payment.payment_method.upper() or '—', styles['Value']),
+            Paragraph((payment.payment_method or '—').replace('_', ' ').upper(), styles['Value']),
             Paragraph('Transaction ID', styles['Label']),
-            Paragraph(order.payment.transaction_id or '—', styles['Value']),
+            Paragraph(payment.transaction_id or '—', styles['Value']),
         ])
     meta_tbl = Table(meta_data, colWidths=[35*mm, 65*mm, 35*mm, 50*mm])
     meta_tbl.setStyle(TableStyle([

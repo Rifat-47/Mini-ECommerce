@@ -1,5 +1,6 @@
 from django.conf import settings
 from ecommerce_backend.email_utils import send_mail_async as _send_async
+from ecommerce_backend.email_utils import send_mail_with_pdf_async as _send_with_pdf
 from django.shortcuts import redirect
 from rest_framework import permissions, status
 from rest_framework.response import Response
@@ -107,27 +108,33 @@ class PaymentCallbackView(APIView):
         bank_status = data.get('bank_status', '').lower()
         sp_code = str(data.get('sp_code', ''))
 
-        if bank_status == 'success' or sp_code == '1000':
-            payment.status = 'completed'
-            payment.order.status = 'In-Progress'
-            payment.order.save(update_fields=['status'])
-            self._send_payment_confirmation(payment)
-            notify(payment.order.user, 'payment_success',
-                   f'Payment Confirmed — Order #{payment.order_id}',
-                   f'Your payment of BDT {payment.amount} for Order #{payment.order_id} was successful.')
-        elif bank_status in ('cancel', 'cancelled'):
-            payment.status = 'cancelled'
-        else:
-            payment.status = 'failed'
-            notify(payment.order.user, 'payment_failed',
-                   f'Payment Failed — Order #{payment.order_id}',
-                   f'Your payment for Order #{payment.order_id} could not be completed. Please try again.')
-
+        # Set all fields before saving so generate_invoice reads correct DB state.
         payment.transaction_id = data.get('bank_trx_id', '')
         payment.payment_method = data.get('method', '')
         payment.sp_code = sp_code
         payment.sp_message = data.get('sp_message', '')
+
+        if bank_status == 'success' or sp_code == '1000':
+            payment.status = 'completed'
+            payment.order.status = 'In-Progress'
+            payment.order.save(update_fields=['status'])
+        elif bank_status in ('cancel', 'cancelled'):
+            payment.status = 'cancelled'
+        else:
+            payment.status = 'failed'
+
         payment.save()
+
+        if payment.status == 'completed':
+            self._send_payment_confirmation(payment)
+            notify(payment.order.user, 'payment_success',
+                   f'Payment Confirmed — Order #{payment.order_id}',
+                   f'Your payment of BDT {payment.amount} for Order #{payment.order_id} was successful.')
+        elif payment.status == 'failed':
+            self._send_payment_failure(payment)
+            notify(payment.order.user, 'payment_failed',
+                   f'Payment Failed — Order #{payment.order_id}',
+                   f'Your payment for Order #{payment.order_id} could not be completed. Please try again.')
 
     def _send_payment_confirmation(self, payment):
         order = payment.order
@@ -137,7 +144,11 @@ class PaymentCallbackView(APIView):
         cfg = SiteSettings.get()
         if not cfg.email_notifications_enabled:
             return
-        _send_async(
+        from orders.models import Order as _Order
+        from orders.pdf_utils import generate_invoice
+        full_order = _Order.objects.prefetch_related('items__product', 'payment').get(pk=order.pk)
+        pdf = generate_invoice(full_order)
+        _send_with_pdf(
             f'Payment Confirmed — Order #{order.id}',
             (
                 f'Hi {order.user.first_name or order.user.email},\n\n'
@@ -145,10 +156,41 @@ class PaymentCallbackView(APIView):
                 f'Your order is now being processed.\n\n'
                 f'Transaction ID: {payment.transaction_id}\n'
                 f'Payment Method: {payment.payment_method}\n\n'
+                f'Please find your invoice attached.\n\n'
                 f'— The {cfg.store_name} Team'
             ),
             cfg.from_email,
             [order.user.email],
+            pdf,
+            f'invoice-{order.id:05d}.pdf',
+        )
+
+    def _send_payment_failure(self, payment):
+        order = payment.order
+        if not order.user:
+            return
+        from config.models import SiteSettings
+        cfg = SiteSettings.get()
+        if not cfg.email_notifications_enabled:
+            return
+        from orders.models import Order as _Order
+        from orders.pdf_utils import generate_invoice
+        full_order = _Order.objects.prefetch_related('items__product', 'payment').get(pk=order.pk)
+        pdf = generate_invoice(full_order)
+        _send_with_pdf(
+            f'Payment Failed — Order #{order.id}',
+            (
+                f'Hi {order.user.first_name or order.user.email},\n\n'
+                f'Unfortunately, your payment for Order #{order.id} could not be completed.\n\n'
+                f'Your order is still saved and you can retry payment or switch to '
+                f'Cash on Delivery from your order history.\n\n'
+                f'Please find your invoice attached for reference.\n\n'
+                f'— The {cfg.store_name} Team'
+            ),
+            cfg.from_email,
+            [order.user.email],
+            pdf,
+            f'invoice-{order.id:05d}.pdf',
         )
 
     def _redirect_url(self, payment):
@@ -252,16 +294,23 @@ class CashOnDeliveryView(APIView):
         order.save(update_fields=['status'])
 
         if order.user and cfg.email_notifications_enabled:
-            _send_async(
+            from orders.models import Order as _Order
+            from orders.pdf_utils import generate_invoice
+            full_order = _Order.objects.prefetch_related('items__product', 'payment').get(pk=order.pk)
+            pdf = generate_invoice(full_order)
+            _send_with_pdf(
                 f'Order Confirmed (Cash on Delivery) — #{order.id}',
                 (
                     f'Hi {order.user.first_name or order.user.email},\n\n'
                     f'Your order #{order.id} has been confirmed with Cash on Delivery.\n'
                     f'Total amount due on delivery: {cfg.currency} {order.total_amount}\n\n'
+                    f'Please find your invoice attached.\n\n'
                     f'— The {cfg.store_name} Team'
                 ),
                 cfg.from_email,
                 [order.user.email],
+                pdf,
+                f'invoice-{order.id:05d}.pdf',
             )
             notify(order.user, 'order_placed',
                    f'Order #{order.id} Confirmed — Cash on Delivery',
