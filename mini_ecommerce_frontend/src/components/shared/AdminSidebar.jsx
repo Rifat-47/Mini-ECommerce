@@ -2,7 +2,7 @@ import { Link, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, Package, ShoppingBag, Users, Tag,
   RotateCcw, CreditCard, ClipboardList, LogOut, ChevronLeft, ChevronRight,
-  ShieldCheck, Settings, Layers,
+  ShieldCheck, Settings, Layers, Mail,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
@@ -26,8 +26,9 @@ const adminNavItems = [
 ]
 
 const superAdminNavItems = [
-  { label: 'Admin Management', to: '/admin/admins',     icon: ShieldCheck },
-  { label: 'Audit Log',        to: '/admin/audit-log',  icon: ClipboardList },
+  { label: 'Admin Management', to: '/admin/admins',      icon: ShieldCheck },
+  { label: 'Audit Log',        to: '/admin/audit-log',   icon: ClipboardList },
+  { label: 'Email Logs',       to: '/admin/email-logs',  icon: Mail },
 ]
 
 export default function AdminSidebar() {

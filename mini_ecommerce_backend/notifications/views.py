@@ -1,8 +1,11 @@
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from .models import Notification
-from .serializers import NotificationSerializer
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.filters import OrderingFilter
+from .models import Notification, EmailLog
+from .serializers import NotificationSerializer, EmailLogSerializer
+from users.permissions import IsSuperAdmin
 
 
 class NotificationListView(generics.ListAPIView):
@@ -53,3 +56,27 @@ class NotificationUnreadCountView(APIView):
     def get(self, request):
         count = Notification.objects.filter(user=request.user, is_read=False).count()
         return Response({'unread_count': count})
+
+
+class EmailLogListView(generics.ListAPIView):
+    """Superadmin-only. List all email logs with optional filters."""
+    serializer_class = EmailLogSerializer
+    permission_classes = [IsSuperAdmin]
+    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    filterset_fields = ['status']
+    ordering_fields = ['sent_at']
+    ordering = ['-sent_at']
+
+    def get_queryset(self):
+        qs = EmailLog.objects.all()
+        search = self.request.query_params.get('search', '').strip()
+        date_from = self.request.query_params.get('date_from', '').strip()
+        date_to = self.request.query_params.get('date_to', '').strip()
+        if search:
+            from django.db.models import Q
+            qs = qs.filter(Q(recipient__icontains=search) | Q(subject__icontains=search))
+        if date_from:
+            qs = qs.filter(sent_at__date__gte=date_from)
+        if date_to:
+            qs = qs.filter(sent_at__date__lte=date_to)
+        return qs
