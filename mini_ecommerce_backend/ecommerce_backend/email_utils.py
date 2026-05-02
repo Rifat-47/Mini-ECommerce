@@ -2,20 +2,49 @@ import base64
 import logging
 import threading
 
+import requests as _requests
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
 
+def _send_via_brevo(subject, message, recipient_list, from_email, pdf_bytes=None, pdf_filename=None):
+    """Send via Brevo HTTP API (port 443 — never blocked by hosting providers)."""
+    api_key = getattr(settings, 'BREVO_API_KEY', '')
+    sender_email = from_email or getattr(settings, 'BREVO_FROM_EMAIL', '')
+    payload = {
+        'sender': {'email': sender_email},
+        'to': [{'email': r} for r in recipient_list],
+        'subject': subject,
+        'textContent': message,
+    }
+    if pdf_bytes and pdf_filename:
+        payload['attachment'] = [{
+            'name': pdf_filename,
+            'content': base64.b64encode(pdf_bytes).decode(),
+        }]
+    response = _requests.post(
+        'https://api.brevo.com/v3/smtp/email',
+        headers={'api-key': api_key, 'Content-Type': 'application/json'},
+        json=payload,
+        timeout=30,
+    )
+    response.raise_for_status()
+
+
 def send_email(subject, message, recipient_list, *, from_email=None, pdf_bytes=None, pdf_filename=None):
-    """Synchronous send. Uses Resend (HTTP API) if RESEND_API_KEY is set, else Django SMTP.
+    """Synchronous send. Priority: Brevo HTTP API → Resend HTTP API → Django SMTP.
 
     Raises on failure so callers can decide whether to log or propagate.
     """
-    api_key = getattr(settings, 'RESEND_API_KEY', '')
-    if api_key:
+    brevo_api_key = getattr(settings, 'BREVO_API_KEY', '')
+    resend_api_key = getattr(settings, 'RESEND_API_KEY', '')
+
+    if brevo_api_key:
+        _send_via_brevo(subject, message, list(recipient_list), from_email, pdf_bytes, pdf_filename)
+    elif resend_api_key:
         import resend as _resend
-        _resend.api_key = api_key
+        _resend.api_key = resend_api_key
         params = {
             'from': getattr(settings, 'RESEND_FROM_EMAIL', 'onboarding@resend.dev'),
             'to': list(recipient_list),

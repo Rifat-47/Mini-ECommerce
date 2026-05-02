@@ -262,8 +262,11 @@ else:
 # RESEND_FROM_EMAIL: use 'onboarding@resend.dev' for testing (Resend sandbox);
 #   for production set a verified sender address from your own domain.
 # When RESEND_API_KEY is blank the app falls back to Django SMTP (works locally).
-RESEND_API_KEY   = os.environ.get('RESEND_API_KEY', '')
+RESEND_API_KEY    = os.environ.get('RESEND_API_KEY', '')
 RESEND_FROM_EMAIL = os.environ.get('RESEND_FROM_EMAIL', 'onboarding@resend.dev')
+
+BREVO_API_KEY   = os.environ.get('BREVO_API_KEY', '')
+BREVO_FROM_EMAIL = os.environ.get('BREVO_FROM_EMAIL', '')
 
 # Cron — secret token checked by /api/internal/cron/* endpoints.
 # Generate with: python -c "import secrets; print(secrets.token_urlsafe(40))"
