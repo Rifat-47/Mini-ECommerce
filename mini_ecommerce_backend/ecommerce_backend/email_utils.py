@@ -8,43 +8,44 @@ from django.conf import settings
 logger = logging.getLogger(__name__)
 
 
-def _send_via_brevo(subject, message, recipient_list, from_email, pdf_bytes=None, pdf_filename=None):
-    """Send via Brevo HTTP API (port 443 — never blocked by hosting providers)."""
-    api_key = getattr(settings, 'BREVO_API_KEY', '')
-    sender_email = from_email or getattr(settings, 'BREVO_FROM_EMAIL', '')
+def _send_via_mailjet(subject, message, recipient_list, from_email, pdf_bytes=None, pdf_filename=None):
+    """Send via Mailjet HTTP API."""
+    api_key = getattr(settings, 'MAILJET_API_KEY', '')
+    secret_key = getattr(settings, 'MAILJET_SECRET_KEY', '')
+    sender_email = from_email or getattr(settings, 'MAILJET_FROM_EMAIL', '')
     payload = {
-        'sender': {'email': sender_email},
-        'to': [{'email': r} for r in recipient_list],
-        'subject': subject,
-        'textContent': message,
+        'Messages': [{
+            'From': {'Email': sender_email},
+            'To': [{'Email': r} for r in recipient_list],
+            'Subject': subject,
+            'TextPart': message,
+        }],
     }
     if pdf_bytes and pdf_filename:
-        payload['attachment'] = [{
-            'name': pdf_filename,
-            'content': base64.b64encode(pdf_bytes).decode(),
+        payload['Messages'][0]['Attachments'] = [{
+            'Filename': pdf_filename,
+            'ContentType': 'application/pdf',
+            'Base64Content': base64.b64encode(pdf_bytes).decode(),
         }]
     response = _requests.post(
-        'https://api.brevo.com/v3/smtp/email',
-        headers={'api-key': api_key, 'Content-Type': 'application/json'},
+        'https://api.mailjet.com/v3.1/send',
+        auth=(api_key, secret_key),
         json=payload,
         timeout=30,
     )
-    logger.info('Brevo response: status=%s body=%s', response.status_code, response.text)
     response.raise_for_status()
 
 
 def send_email(subject, message, recipient_list, *, from_email=None, pdf_bytes=None, pdf_filename=None):
-    """Synchronous send. Priority: Brevo HTTP API → Resend HTTP API → Django SMTP.
+    """Synchronous send. Priority: Mailjet HTTP API → Resend HTTP API → Django SMTP.
 
     Raises on failure so callers can decide whether to log or propagate.
     """
-    brevo_api_key = getattr(settings, 'BREVO_API_KEY', '')
+    mailjet_api_key = getattr(settings, 'MAILJET_API_KEY', '')
     resend_api_key = getattr(settings, 'RESEND_API_KEY', '')
 
-    logger.info('send_email path — brevo=%s resend=%s', bool(brevo_api_key), bool(resend_api_key))
-
-    if brevo_api_key:
-        _send_via_brevo(subject, message, list(recipient_list), from_email, pdf_bytes, pdf_filename)
+    if mailjet_api_key:
+        _send_via_mailjet(subject, message, list(recipient_list), from_email, pdf_bytes, pdf_filename)
     elif resend_api_key:
         import resend as _resend
         _resend.api_key = resend_api_key

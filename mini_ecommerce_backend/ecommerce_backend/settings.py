@@ -237,36 +237,25 @@ SIMPLE_JWT = {
 }
 
 # Email configurations
+# Django SMTP is used as fallback when SENDGRID_API_KEY is not set (local dev with Gmail).
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_TIMEOUT = 30
+EMAIL_HOST     = 'smtp.gmail.com'
+EMAIL_PORT     = 587
+EMAIL_USE_TLS  = True
+EMAIL_HOST_USER     = os.environ.get('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
+DEFAULT_FROM_EMAIL  = os.environ.get('EMAIL_HOST_USER')
 
-if os.environ.get('BREVO_SMTP_PASSWORD'):
-    # Brevo SMTP — works on Railway/Render, no domain verification needed
-    EMAIL_HOST     = 'smtp-relay.brevo.com'
-    EMAIL_PORT     = 2525
-    EMAIL_USE_TLS  = True
-    EMAIL_HOST_USER     = os.environ.get('BREVO_SMTP_LOGIN')
-    EMAIL_HOST_PASSWORD = os.environ.get('BREVO_SMTP_PASSWORD')
-    DEFAULT_FROM_EMAIL  = os.environ.get('BREVO_FROM_EMAIL', os.environ.get('BREVO_SMTP_LOGIN'))
-else:
-    # Gmail SMTP fallback (works locally)
-    EMAIL_HOST     = 'smtp.gmail.com'
-    EMAIL_PORT     = 587
-    EMAIL_USE_TLS  = True
-    EMAIL_HOST_USER     = os.environ.get('EMAIL_HOST_USER')
-    EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
-    DEFAULT_FROM_EMAIL  = os.environ.get('EMAIL_HOST_USER')
+# Mailjet — HTTP-based email delivery (no IP whitelisting required).
+# Set MAILJET_API_KEY + MAILJET_SECRET_KEY in production; app falls back to Gmail SMTP when blank.
+MAILJET_API_KEY     = os.environ.get('MAILJET_API_KEY', '')
+MAILJET_SECRET_KEY  = os.environ.get('MAILJET_SECRET_KEY', '')
+MAILJET_FROM_EMAIL  = os.environ.get('MAILJET_FROM_EMAIL', '')
 
-# Resend — HTTP-based email delivery (replaces Gmail SMTP, which Render free tier blocks).
-# Sign up at resend.com, create an API key, and set it here.
-# RESEND_FROM_EMAIL: use 'onboarding@resend.dev' for testing (Resend sandbox);
-#   for production set a verified sender address from your own domain.
-# When RESEND_API_KEY is blank the app falls back to Django SMTP (works locally).
+# Resend — kept as secondary fallback if SendGrid key is absent.
 RESEND_API_KEY    = os.environ.get('RESEND_API_KEY', '')
 RESEND_FROM_EMAIL = os.environ.get('RESEND_FROM_EMAIL', 'onboarding@resend.dev')
-
-BREVO_API_KEY   = os.environ.get('BREVO_API_KEY', '')
-BREVO_FROM_EMAIL = os.environ.get('BREVO_FROM_EMAIL', '')
 
 # Cron — secret token checked by /api/internal/cron/* endpoints.
 # Generate with: python -c "import secrets; print(secrets.token_urlsafe(40))"
