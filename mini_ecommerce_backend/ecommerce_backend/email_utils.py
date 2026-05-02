@@ -36,6 +36,19 @@ def _send_via_mailjet(subject, message, recipient_list, from_email, pdf_bytes=No
     response.raise_for_status()
 
 
+def _save_email_log(recipient_list, subject, status, error_message=''):
+    """Persist an EmailLog row for each recipient. Never raises."""
+    try:
+        from notifications.models import EmailLog
+        logs = [
+            EmailLog(recipient=r, subject=subject, status=status, error_message=error_message)
+            for r in recipient_list
+        ]
+        EmailLog.objects.bulk_create(logs)
+    except Exception as exc:
+        logger.error('EmailLog save failed: %s', exc)
+
+
 def send_email(subject, message, recipient_list, *, from_email=None, pdf_bytes=None, pdf_filename=None):
     """Synchronous send. Priority: Mailjet HTTP API → Resend HTTP API → Django SMTP.
 
@@ -43,33 +56,40 @@ def send_email(subject, message, recipient_list, *, from_email=None, pdf_bytes=N
     """
     mailjet_api_key = getattr(settings, 'MAILJET_API_KEY', '')
     resend_api_key = getattr(settings, 'RESEND_API_KEY', '')
+    recipients = list(recipient_list)
 
-    if mailjet_api_key:
-        _send_via_mailjet(subject, message, list(recipient_list), from_email, pdf_bytes, pdf_filename)
-    elif resend_api_key:
-        import resend as _resend
-        _resend.api_key = resend_api_key
-        params = {
-            'from': getattr(settings, 'RESEND_FROM_EMAIL', 'onboarding@resend.dev'),
-            'to': list(recipient_list),
-            'subject': subject,
-            'text': message,
-        }
-        if pdf_bytes and pdf_filename:
-            params['attachments'] = [{
-                'filename': pdf_filename,
-                'content': base64.b64encode(pdf_bytes).decode(),
-            }]
-        _resend.Emails.send(params)
-    else:
-        if pdf_bytes and pdf_filename:
-            from django.core.mail import EmailMessage
-            msg = EmailMessage(subject, message, from_email, list(recipient_list))
-            msg.attach(pdf_filename, pdf_bytes, 'application/pdf')
-            msg.send(fail_silently=False)
+    try:
+        if mailjet_api_key:
+            _send_via_mailjet(subject, message, recipients, from_email, pdf_bytes, pdf_filename)
+        elif resend_api_key:
+            import resend as _resend
+            _resend.api_key = resend_api_key
+            params = {
+                'from': getattr(settings, 'RESEND_FROM_EMAIL', 'onboarding@resend.dev'),
+                'to': recipients,
+                'subject': subject,
+                'text': message,
+            }
+            if pdf_bytes and pdf_filename:
+                params['attachments'] = [{
+                    'filename': pdf_filename,
+                    'content': base64.b64encode(pdf_bytes).decode(),
+                }]
+            _resend.Emails.send(params)
         else:
-            from django.core.mail import send_mail as _send_mail
-            _send_mail(subject, message, from_email, list(recipient_list), fail_silently=False)
+            if pdf_bytes and pdf_filename:
+                from django.core.mail import EmailMessage
+                msg = EmailMessage(subject, message, from_email, recipients)
+                msg.attach(pdf_filename, pdf_bytes, 'application/pdf')
+                msg.send(fail_silently=False)
+            else:
+                from django.core.mail import send_mail as _send_mail
+                _send_mail(subject, message, from_email, recipients, fail_silently=False)
+    except Exception as exc:
+        _save_email_log(recipients, subject, 'failed', str(exc))
+        raise
+
+    _save_email_log(recipients, subject, 'sent')
 
 
 def send_mail_async(subject, message, from_email, recipient_list):
