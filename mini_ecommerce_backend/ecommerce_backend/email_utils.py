@@ -29,6 +29,7 @@ def _send_via_brevo(subject, message, recipient_list, from_email, pdf_bytes=None
         json=payload,
         timeout=30,
     )
+    logger.info('Brevo response: status=%s body=%s', response.status_code, response.text)
     response.raise_for_status()
 
 
@@ -39,6 +40,8 @@ def send_email(subject, message, recipient_list, *, from_email=None, pdf_bytes=N
     """
     brevo_api_key = getattr(settings, 'BREVO_API_KEY', '')
     resend_api_key = getattr(settings, 'RESEND_API_KEY', '')
+
+    logger.info('send_email path — brevo=%s resend=%s', bool(brevo_api_key), bool(resend_api_key))
 
     if brevo_api_key:
         _send_via_brevo(subject, message, list(recipient_list), from_email, pdf_bytes, pdf_filename)
