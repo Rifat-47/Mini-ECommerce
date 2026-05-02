@@ -238,16 +238,24 @@ SIMPLE_JWT = {
 
 # Email configurations
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
-EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
-DEFAULT_FROM_EMAIL = os.environ.get('EMAIL_HOST_USER')
-# Cap SMTP socket connection at 10 s. Without this Django has no timeout, so a
-# slow or unresponsive Gmail connection blocks the request thread indefinitely
-# and triggers gunicorn's 30 s worker timeout — killing the request mid-flight.
 EMAIL_TIMEOUT = 10
+
+if os.environ.get('BREVO_SMTP_PASSWORD'):
+    # Brevo SMTP — works on Railway/Render, no domain verification needed
+    EMAIL_HOST     = 'smtp-relay.brevo.com'
+    EMAIL_PORT     = 587
+    EMAIL_USE_TLS  = True
+    EMAIL_HOST_USER     = os.environ.get('BREVO_SMTP_LOGIN')
+    EMAIL_HOST_PASSWORD = os.environ.get('BREVO_SMTP_PASSWORD')
+    DEFAULT_FROM_EMAIL  = os.environ.get('BREVO_FROM_EMAIL', os.environ.get('BREVO_SMTP_LOGIN'))
+else:
+    # Gmail SMTP fallback (works locally)
+    EMAIL_HOST     = 'smtp.gmail.com'
+    EMAIL_PORT     = 587
+    EMAIL_USE_TLS  = True
+    EMAIL_HOST_USER     = os.environ.get('EMAIL_HOST_USER')
+    EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
+    DEFAULT_FROM_EMAIL  = os.environ.get('EMAIL_HOST_USER')
 
 # Resend — HTTP-based email delivery (replaces Gmail SMTP, which Render free tier blocks).
 # Sign up at resend.com, create an API key, and set it here.
