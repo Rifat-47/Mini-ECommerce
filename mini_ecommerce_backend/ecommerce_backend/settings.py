@@ -243,7 +243,7 @@ EMAIL_TIMEOUT = 30
 if os.environ.get('BREVO_SMTP_PASSWORD'):
     # Brevo SMTP — works on Railway/Render, no domain verification needed
     EMAIL_HOST     = 'smtp-relay.brevo.com'
-    EMAIL_PORT     = 587
+    EMAIL_PORT     = 2525
     EMAIL_USE_TLS  = True
     EMAIL_HOST_USER     = os.environ.get('BREVO_SMTP_LOGIN')
     EMAIL_HOST_PASSWORD = os.environ.get('BREVO_SMTP_PASSWORD')
