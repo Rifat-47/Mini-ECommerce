@@ -238,7 +238,7 @@ SIMPLE_JWT = {
 
 # Email configurations
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_TIMEOUT = 10
+EMAIL_TIMEOUT = 30
 
 if os.environ.get('BREVO_SMTP_PASSWORD'):
     # Brevo SMTP — works on Railway/Render, no domain verification needed
