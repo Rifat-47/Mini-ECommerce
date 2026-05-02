@@ -44,15 +44,15 @@ function AddressForm({ onSave, onCancel }) {
       <ErrorMessage error={error} />
       <div className="grid grid-cols-2 gap-3">
         <div className="col-span-2 sm:col-span-1">
-          <Label htmlFor="full_name" className="text-xs">Full name *</Label>
+          <Label htmlFor="full_name" className="text-xs">Full name <span className="text-destructive">*</span></Label>
           <Input id="full_name" name="full_name" value={form.full_name} onChange={handleChange} required className="mt-1 h-8 text-sm" />
         </div>
         <div className="col-span-2 sm:col-span-1">
-          <Label htmlFor="phone" className="text-xs">Phone *</Label>
+          <Label htmlFor="phone" className="text-xs">Phone <span className="text-destructive">*</span></Label>
           <Input id="phone" name="phone" value={form.phone} onChange={handleChange} required className="mt-1 h-8 text-sm" />
         </div>
         <div className="col-span-2">
-          <Label htmlFor="address_line_1" className="text-xs">Address *</Label>
+          <Label htmlFor="address_line_1" className="text-xs">Address <span className="text-destructive">*</span></Label>
           <Input id="address_line_1" name="address_line_1" value={form.address_line_1} onChange={handleChange} required className="mt-1 h-8 text-sm" />
         </div>
         <div className="col-span-2">
@@ -60,15 +60,15 @@ function AddressForm({ onSave, onCancel }) {
           <Input id="address_line_2" name="address_line_2" value={form.address_line_2} onChange={handleChange} className="mt-1 h-8 text-sm" />
         </div>
         <div>
-          <Label htmlFor="city" className="text-xs">City *</Label>
+          <Label htmlFor="city" className="text-xs">City <span className="text-destructive">*</span></Label>
           <Input id="city" name="city" value={form.city} onChange={handleChange} required className="mt-1 h-8 text-sm" />
         </div>
         <div>
-          <Label htmlFor="state" className="text-xs">State / Division *</Label>
+          <Label htmlFor="state" className="text-xs">State / Division <span className="text-destructive">*</span></Label>
           <Input id="state" name="state" value={form.state} onChange={handleChange} required className="mt-1 h-8 text-sm" />
         </div>
         <div>
-          <Label htmlFor="postal_code" className="text-xs">Postal code *</Label>
+          <Label htmlFor="postal_code" className="text-xs">Postal code <span className="text-destructive">*</span></Label>
           <Input id="postal_code" name="postal_code" value={form.postal_code} onChange={handleChange} required className="mt-1 h-8 text-sm" />
         </div>
         <div>
@@ -216,7 +216,7 @@ export default function CheckoutPage() {
             <div>
               <h2 className="font-semibold mb-3 flex items-center gap-2">
                 <MapPin className="h-4 w-4 text-primary" />
-                Shipping Address
+                Shipping Address <span className="text-destructive">*</span>
               </h2>
 
               <div className="space-y-2">
@@ -333,7 +333,7 @@ export default function CheckoutPage() {
             <div>
               <h2 className="font-semibold mb-3 flex items-center gap-2">
                 <CreditCard className="h-4 w-4 text-primary" />
-                Payment Method
+                Payment Method <span className="text-destructive">*</span>
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <button

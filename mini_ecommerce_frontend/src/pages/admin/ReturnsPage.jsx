@@ -62,7 +62,7 @@ function ReviewDialog({ returnItem, onClose, onSaved }) {
       </div>
       <ErrorMessage error={error} />
       <div className="space-y-1.5">
-        <Label>Decision</Label>
+        <Label>Decision <span className="text-destructive">*</span></Label>
         <Select value={status} onValueChange={setStatus}>
           <SelectTrigger><SelectValue placeholder="Select decision" /></SelectTrigger>
           <SelectContent>

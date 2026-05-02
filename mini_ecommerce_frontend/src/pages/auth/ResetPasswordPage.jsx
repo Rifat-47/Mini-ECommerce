@@ -73,7 +73,7 @@ export default function ResetPasswordPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="new_password">New password</Label>
+            <Label htmlFor="new_password">New password <span className="text-destructive">*</span></Label>
             <div className="relative">
               <Input
                 id="new_password"
@@ -98,7 +98,7 @@ export default function ResetPasswordPage() {
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="confirm_password">Confirm password</Label>
+            <Label htmlFor="confirm_password">Confirm password <span className="text-destructive">*</span></Label>
             <Input
               id="confirm_password"
               type={showPassword ? 'text' : 'password'}

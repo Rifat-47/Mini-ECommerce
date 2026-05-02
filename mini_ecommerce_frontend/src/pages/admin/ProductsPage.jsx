@@ -130,7 +130,7 @@ function ProductForm({ initial, categories, onSave, onClose, markDirty, confirmC
         <ErrorMessage error={error} />
         <div className="grid grid-cols-2 gap-3">
           <div className="col-span-2 space-y-1">
-            <Label>Name *</Label>
+            <Label>Name <span className="text-destructive">*</span></Label>
             <Input value={form.name} onChange={field('name')} required />
           </div>
           <div className="col-span-2 space-y-1">
@@ -138,7 +138,7 @@ function ProductForm({ initial, categories, onSave, onClose, markDirty, confirmC
             <Textarea value={form.description} onChange={field('description')} rows={3} />
           </div>
           <div className="space-y-1">
-            <Label>Price (৳) *</Label>
+            <Label>Price (৳) <span className="text-destructive">*</span></Label>
             <Input type="number" step="0.01" min="0" value={form.price} onChange={field('price')} required />
           </div>
           <div className="space-y-1">
@@ -146,11 +146,11 @@ function ProductForm({ initial, categories, onSave, onClose, markDirty, confirmC
             <Input type="number" step="0.01" min="0" max="100" value={form.discount_percentage} onChange={field('discount_percentage')} />
           </div>
           <div className="space-y-1">
-            <Label>Stock *</Label>
+            <Label>Stock <span className="text-destructive">*</span></Label>
             <Input type="number" min="0" value={form.stock} onChange={field('stock')} required />
           </div>
           <div className="space-y-1">
-            <Label>Category</Label>
+            <Label>Category <span className="text-destructive">*</span></Label>
             <Select value={form.category || 'none'} onValueChange={(v) => { setForm(f => ({ ...f, category: v === 'none' ? '' : v })); markDirty() }}>
               <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
               <SelectContent>

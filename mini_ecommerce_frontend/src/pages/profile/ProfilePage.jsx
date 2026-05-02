@@ -141,15 +141,15 @@ function AddressFormInline({ initial = {}, onSave, onCancel }) {
         <ErrorMessage error={error} />
         <div className="grid grid-cols-2 gap-3">
           <div className="col-span-2 sm:col-span-1 space-y-1">
-            <Label className="text-xs">Full name *</Label>
+            <Label className="text-xs">Full name <span className="text-destructive">*</span></Label>
             <Input name="full_name" value={form.full_name} onChange={field('full_name')} required className="h-8 text-sm" />
           </div>
           <div className="col-span-2 sm:col-span-1 space-y-1">
-            <Label className="text-xs">Phone *</Label>
+            <Label className="text-xs">Phone <span className="text-destructive">*</span></Label>
             <Input name="phone" value={form.phone} onChange={field('phone')} required className="h-8 text-sm" />
           </div>
           <div className="col-span-2 space-y-1">
-            <Label className="text-xs">Address *</Label>
+            <Label className="text-xs">Address <span className="text-destructive">*</span></Label>
             <Input value={form.address_line_1} onChange={field('address_line_1')} required className="h-8 text-sm" />
           </div>
           <div className="col-span-2 space-y-1">
@@ -157,15 +157,15 @@ function AddressFormInline({ initial = {}, onSave, onCancel }) {
             <Input value={form.address_line_2} onChange={field('address_line_2')} className="h-8 text-sm" />
           </div>
           <div className="space-y-1">
-            <Label className="text-xs">City *</Label>
+            <Label className="text-xs">City <span className="text-destructive">*</span></Label>
             <Input value={form.city} onChange={field('city')} required className="h-8 text-sm" />
           </div>
           <div className="space-y-1">
-            <Label className="text-xs">State *</Label>
+            <Label className="text-xs">State <span className="text-destructive">*</span></Label>
             <Input value={form.state} onChange={field('state')} required className="h-8 text-sm" />
           </div>
           <div className="space-y-1">
-            <Label className="text-xs">Postal code *</Label>
+            <Label className="text-xs">Postal code <span className="text-destructive">*</span></Label>
             <Input value={form.postal_code} onChange={field('postal_code')} required className="h-8 text-sm" />
           </div>
           <div className="space-y-1">
@@ -334,19 +334,19 @@ function SecurityTab() {
       <ErrorMessage error={error} />
 
       <div className="space-y-1.5">
-        <Label htmlFor="old_password">Current password</Label>
+        <Label htmlFor="old_password">Current password <span className="text-destructive">*</span></Label>
         <Input id="old_password" type="password" value={form.old_password} onChange={(e) => setForm((f) => ({ ...f, old_password: e.target.value }))} required autoComplete="current-password" />
       </div>
 
       <Separator />
 
       <div className="space-y-1.5">
-        <Label htmlFor="new_password">New password</Label>
+        <Label htmlFor="new_password">New password <span className="text-destructive">*</span></Label>
         <Input id="new_password" type="password" placeholder="Min. 8 characters" value={form.new_password} onChange={(e) => setForm((f) => ({ ...f, new_password: e.target.value }))} required autoComplete="new-password" />
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="confirm_password">Confirm new password</Label>
+        <Label htmlFor="confirm_password">Confirm new password <span className="text-destructive">*</span></Label>
         <Input id="confirm_password" type="password" value={form.confirm_password} onChange={(e) => setForm((f) => ({ ...f, confirm_password: e.target.value }))} required autoComplete="new-password" />
       </div>
 
@@ -433,7 +433,7 @@ function PrivacyTab() {
             <p className="text-sm font-medium text-destructive">Confirm account deletion</p>
             <ErrorMessage error={deleteError} />
             <div className="space-y-1.5">
-              <Label htmlFor="delete_password" className="text-sm">Enter your password to confirm</Label>
+              <Label htmlFor="delete_password" className="text-sm">Enter your password to confirm <span className="text-destructive">*</span></Label>
               <Input
                 id="delete_password"
                 type="password"

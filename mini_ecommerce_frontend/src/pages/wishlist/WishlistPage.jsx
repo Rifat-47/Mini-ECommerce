@@ -12,6 +12,7 @@ function WishlistItem({ item, isAuthenticated }) {
   const removeItem = useWishlistStore((s) => s.removeItem)
   const removeFromBackend = useWishlistStore((s) => s.removeFromBackend)
   const addCartItem = useCartStore((s) => s.addItem)
+  const addBackendCartItem = useCartStore((s) => s.addBackendCartItem)
 
   const discountPct = parseFloat(item.discount_percentage || 0)
   const originalPrice = parseFloat(item.price)
@@ -21,12 +22,9 @@ function WishlistItem({ item, isAuthenticated }) {
   async function handleMoveToCart() {
     if (isAuthenticated && item.wishlist_item_id) {
       try {
-        await api.post(`/wishlist/${item.wishlist_item_id}/move-to-cart/`)
-        // Refetch wishlist from backend after move
-        const { default: useWishlistStore } = await import('@/store/wishlistStore')
-        const store = useWishlistStore.getState()
-        const updated = store.items.filter((i) => i.product_id !== item.product_id)
-        useWishlistStore.setState({ items: updated })
+        const { data: cartItem } = await api.post(`/wishlist/${item.wishlist_item_id}/move-to-cart/`)
+        addBackendCartItem(cartItem, item.image || null)
+        removeItem(item.product_id)
         toast.success('Moved to cart')
         return
       } catch {

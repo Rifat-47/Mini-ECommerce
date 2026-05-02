@@ -1,134 +1,234 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { ChevronDown } from 'lucide-react'
+import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 const MONTHS = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December',
 ]
+const DAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
 const CURRENT_YEAR = new Date().getFullYear()
 const YEARS = Array.from({ length: CURRENT_YEAR - 1919 }, (_, i) => CURRENT_YEAR - i)
 
-const ITEM_HEIGHT = 36
-const PANEL_HEIGHT = ITEM_HEIGHT * 5
-
-function getDaysInMonth(month, year) {
-  if (!month) return 31
-  return new Date(year || 2000, parseInt(month), 0).getDate()
+function parseValue(value) {
+  if (!value) return null
+  const [y, m, d] = value.split('-').map(Number)
+  if (!y || !m || !d) return null
+  return { year: y, month: m, day: d }
 }
 
-function CustomSelect({ placeholder, options, value, onChange }) {
+function formatDisplay(value) {
+  const p = parseValue(value)
+  if (!p) return ''
+  return `${MONTHS[p.month - 1]} ${p.day}, ${p.year}`
+}
+
+function getDaysInMonth(year, month) {
+  return new Date(year, month, 0).getDate()
+}
+
+function getFirstDayOfWeek(year, month) {
+  return new Date(year, month - 1, 1).getDay()
+}
+
+export default function DateOfBirthPicker({ initialValue = '', onChange }) {
+  const [value, setValue] = useState(initialValue)
   const [open, setOpen] = useState(false)
   const [panelStyle, setPanelStyle] = useState({})
-  const triggerRef = useRef(null)
-  const listRef = useRef(null)
+  const [view, setView] = useState('calendar') // 'calendar' | 'year'
 
+  const parsed = parseValue(value)
+  const today = new Date()
+  const [viewYear, setViewYear] = useState(parsed?.year || today.getFullYear())
+  const [viewMonth, setViewMonth] = useState(parsed?.month || today.getMonth() + 1)
+
+  const triggerRef = useRef(null)
+  const panelRef = useRef(null)
+  const yearListRef = useRef(null)
+
+  // Sync internal value if parent changes initialValue after mount (e.g. async profile load)
+  useEffect(() => {
+    if (initialValue && initialValue !== value) {
+      setValue(initialValue)
+      const p = parseValue(initialValue)
+      if (p) { setViewYear(p.year); setViewMonth(p.month) }
+    }
+  }, [initialValue])
+
+  // Position panel below (or above) trigger
+  useEffect(() => {
+    if (open && triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect()
+      const panelH = 320
+      const spaceBelow = window.innerHeight - rect.bottom
+      const top = spaceBelow >= panelH + 8
+        ? rect.bottom + window.scrollY + 4
+        : rect.top + window.scrollY - panelH - 4
+      setPanelStyle({ top, left: rect.left + window.scrollX, width: Math.max(rect.width, 280) })
+    }
+    if (open && view === 'year') {
+      // Scroll year list to selected year
+      requestAnimationFrame(() => {
+        if (yearListRef.current) {
+          const idx = YEARS.indexOf(viewYear)
+          if (idx >= 0) yearListRef.current.scrollTop = idx * 36 - 72
+        }
+      })
+    }
+  }, [open, view])
+
+  // Close on outside click
   useEffect(() => {
     function handle(e) {
-      if (triggerRef.current && !triggerRef.current.contains(e.target)) setOpen(false)
+      if (
+        triggerRef.current && !triggerRef.current.contains(e.target) &&
+        !(panelRef.current && panelRef.current.contains(e.target))
+      ) setOpen(false)
     }
     document.addEventListener('mousedown', handle)
     return () => document.removeEventListener('mousedown', handle)
   }, [])
 
-  useEffect(() => {
-    if (open && triggerRef.current) {
-      const rect = triggerRef.current.getBoundingClientRect()
-      const spaceBelow = window.innerHeight - rect.bottom
-
-      if (spaceBelow >= PANEL_HEIGHT + 8) {
-        setPanelStyle({
-          top: rect.bottom + window.scrollY + 4,
-          left: rect.left + window.scrollX,
-          width: rect.width,
-        })
-      } else {
-        setPanelStyle({
-          top: rect.top + window.scrollY - PANEL_HEIGHT - 4,
-          left: rect.left + window.scrollX,
-          width: rect.width,
-        })
-      }
-
-      // Scroll to selected item
-      if (listRef.current && value) {
-        const idx = options.findIndex(o => String(o.value) === String(value))
-        if (idx >= 0) listRef.current.scrollTop = idx * ITEM_HEIGHT
-      }
-    }
-  }, [open])
-
-  const selected = options.find(o => String(o.value) === String(value))
-
-  return (
-    <div ref={triggerRef} className="relative flex-1 min-w-0">
-      <button
-        type="button"
-        onClick={() => setOpen(o => !o)}
-        className={`w-full flex items-center justify-between gap-1 rounded-md border px-2.5 py-2 text-sm bg-background ring-offset-background transition-colors
-          ${open ? 'border-ring ring-2 ring-ring ring-offset-2' : 'border-input hover:border-ring/50'}
-          ${!selected ? 'text-muted-foreground' : 'text-foreground'}`}
-      >
-        <span className="truncate">{selected ? selected.label : placeholder}</span>
-        <ChevronDown className={`h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`} />
-      </button>
-
-      {open && createPortal(
-        <ul
-          ref={listRef}
-          style={{ ...panelStyle, height: PANEL_HEIGHT, position: 'absolute', overflowY: 'scroll' }}
-          className="z-[9999] rounded-md border border-border bg-popover shadow-md overscroll-contain"
-        >
-          {options.map(opt => (
-            <li
-              key={opt.value}
-              style={{ height: ITEM_HEIGHT }}
-              onClick={() => { onChange(String(opt.value)); setOpen(false) }}
-              className={`flex items-center px-3 text-sm cursor-pointer select-none transition-colors
-                ${String(opt.value) === String(value)
-                  ? 'bg-primary text-primary-foreground'
-                  : 'hover:bg-accent hover:text-accent-foreground'}`}
-            >
-              {opt.label}
-            </li>
-          ))}
-        </ul>,
-        document.body
-      )}
-    </div>
-  )
-}
-
-export default function DateOfBirthPicker({ initialValue = '', onChange }) {
-  const parts = initialValue ? initialValue.split('-') : []
-  const [year, setYear] = useState(parts[0] || '')
-  const [month, setMonth] = useState(parts[1] ? String(parseInt(parts[1])) : '')
-  const [day, setDay] = useState(parts[2] ? String(parseInt(parts[2])) : '')
-
-  const daysInMonth = getDaysInMonth(month, year)
-
-  const monthOptions = MONTHS.map((name, i) => ({ value: i + 1, label: name }))
-  const dayOptions = Array.from({ length: daysInMonth }, (_, i) => ({ value: i + 1, label: String(i + 1) }))
-  const yearOptions = YEARS.map(y => ({ value: y, label: String(y) }))
-
-  function emit(nextMonth, nextDay, nextYear) {
-    if (nextMonth && nextDay && nextYear) {
-      const safeDay = Math.min(parseInt(nextDay), getDaysInMonth(nextMonth, nextYear))
-      onChange(`${nextYear}-${String(nextMonth).padStart(2, '0')}-${String(safeDay).padStart(2, '0')}`)
-    } else {
-      onChange('')
-    }
+  function selectDate(day) {
+    const iso = `${viewYear}-${String(viewMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+    setValue(iso)
+    onChange(iso)
+    setOpen(false)
   }
 
-  function handleMonth(val) { setMonth(val); emit(val, day, year) }
-  function handleDay(val)   { setDay(val);   emit(month, val, year) }
-  function handleYear(val)  { setYear(val);  emit(month, day, val) }
+  function prevMonth() {
+    if (viewMonth === 1) { setViewMonth(12); setViewYear(y => y - 1) }
+    else setViewMonth(m => m - 1)
+  }
+
+  function nextMonth() {
+    if (viewMonth === 12) { setViewMonth(1); setViewYear(y => y + 1) }
+    else setViewMonth(m => m + 1)
+  }
+
+  const totalDays = getDaysInMonth(viewYear, viewMonth)
+  const firstDow = getFirstDayOfWeek(viewYear, viewMonth)
+  const cells = [...Array(firstDow).fill(null), ...Array.from({ length: totalDays }, (_, i) => i + 1)]
 
   return (
-    <div className="flex gap-1.5">
-      <CustomSelect placeholder="Month" options={monthOptions} value={month} onChange={handleMonth} />
-      <CustomSelect placeholder="Day"   options={dayOptions}   value={day}   onChange={handleDay} />
-      <CustomSelect placeholder="Year"  options={yearOptions}  value={year}  onChange={handleYear} />
+    <div ref={triggerRef} className="relative">
+      {/* Trigger */}
+      <button
+        type="button"
+        onClick={() => { setView('calendar'); setOpen(o => !o) }}
+        className={cn(
+          'w-full flex items-center gap-2 rounded-md border px-3 py-2 text-sm bg-background ring-offset-background transition-colors text-left',
+          open ? 'border-ring ring-2 ring-ring ring-offset-2' : 'border-input hover:border-ring/50',
+          !value && 'text-muted-foreground',
+        )}
+      >
+        <CalendarDays className="h-4 w-4 shrink-0 text-muted-foreground" />
+        <span>{value ? formatDisplay(value) : 'Select date of birth'}</span>
+      </button>
+
+      {/* Popover */}
+      {open && createPortal(
+        <div
+          ref={panelRef}
+          style={{ ...panelStyle, position: 'absolute' }}
+          className="z-[9999] rounded-xl border border-border bg-popover shadow-lg overflow-hidden"
+        >
+          {view === 'calendar' ? (
+            <div className="p-3 w-[280px]">
+              {/* Header */}
+              <div className="flex items-center justify-between mb-3">
+                <button
+                  type="button"
+                  onClick={prevMonth}
+                  className="p-1 rounded hover:bg-accent transition-colors"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setView('year')}
+                  className="text-sm font-semibold hover:text-primary transition-colors px-2 py-0.5 rounded hover:bg-accent"
+                >
+                  {MONTHS[viewMonth - 1]} {viewYear}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={nextMonth}
+                  className="p-1 rounded hover:bg-accent transition-colors"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+
+              {/* Day headers */}
+              <div className="grid grid-cols-7 mb-1">
+                {DAYS.map(d => (
+                  <div key={d} className="text-center text-xs text-muted-foreground font-medium py-1">
+                    {d}
+                  </div>
+                ))}
+              </div>
+
+              {/* Day grid */}
+              <div className="grid grid-cols-7 gap-y-0.5">
+                {cells.map((day, i) => {
+                  if (!day) return <div key={`e-${i}`} />
+                  const isSelected = parsed?.year === viewYear && parsed?.month === viewMonth && parsed?.day === day
+                  return (
+                    <button
+                      key={day}
+                      type="button"
+                      onClick={() => selectDate(day)}
+                      className={cn(
+                        'h-8 w-full rounded-md text-sm transition-colors',
+                        isSelected
+                          ? 'bg-primary text-primary-foreground font-medium'
+                          : 'hover:bg-accent hover:text-accent-foreground',
+                      )}
+                    >
+                      {day}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          ) : (
+            /* Year picker */
+            <div className="w-[280px]">
+              <div className="flex items-center justify-between px-3 py-2.5 border-b border-border">
+                <span className="text-sm font-semibold">Select Year</span>
+                <button
+                  type="button"
+                  onClick={() => setView('calendar')}
+                  className="text-xs text-primary hover:underline"
+                >
+                  Back
+                </button>
+              </div>
+              <ul ref={yearListRef} className="h-[216px] overflow-y-auto">
+                {YEARS.map(y => (
+                  <li
+                    key={y}
+                    onClick={() => { setViewYear(y); setView('calendar') }}
+                    className={cn(
+                      'flex items-center px-4 h-9 text-sm cursor-pointer transition-colors select-none',
+                      y === viewYear
+                        ? 'bg-primary text-primary-foreground font-medium'
+                        : 'hover:bg-accent hover:text-accent-foreground',
+                    )}
+                  >
+                    {y}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>,
+        document.body,
+      )}
     </div>
   )
 }

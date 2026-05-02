@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import useAuthStore from '@/store/authStore'
 import useCartStore from '@/store/cartStore'
+import useWishlistStore from '@/store/wishlistStore'
 import useNotificationStore from '@/store/notificationStore'
 import useThemeStore from '@/store/themeStore'
 import useSettingsStore from '@/store/settingsStore'
@@ -25,6 +26,7 @@ export default function Navbar() {
   const [searchParams] = useSearchParams()
   const { user, accessToken, logout } = useAuthStore()
   const cartCount = useCartStore((s) => s.items.reduce((sum, i) => sum + i.quantity, 0))
+  const wishlistCount = useWishlistStore((s) => s.items.length)
   const { unreadCount, notifications, isLoading, fetchUnreadCount, fetchNotifications, markRead, markAllRead } = useNotificationStore()
   const { theme, toggle } = useThemeStore()
   const storeName = useSettingsStore(s => s.settings.store_name)
@@ -188,6 +190,24 @@ export default function Navbar() {
                 ? <Sun className="h-5 w-5" />
                 : <Moon className="h-5 w-5" />}
             </Button>
+
+            {/* Wishlist (logged in only) */}
+            {accessToken && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="relative"
+                onClick={() => navigate('/wishlist')}
+                aria-label="Wishlist"
+              >
+                <Heart className="h-5 w-5" />
+                {wishlistCount > 0 && (
+                  <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs bg-primary">
+                    {wishlistCount > 99 ? '99+' : wishlistCount}
+                  </Badge>
+                )}
+              </Button>
+            )}
 
             {/* Cart */}
             <Button
