@@ -1,3 +1,7 @@
+# ── Seed / one-off scripts ────────────────────────────────
+mini_ecommerce_backend/seed_prod.py
+mini_ecommerce_backend/seed_images.py
+
 # ── Python / Django ───────────────────────────────────────
 mini_ecommerce_backend/venv/
 mini_ecommerce_backend/.env
