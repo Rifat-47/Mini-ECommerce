@@ -9,6 +9,9 @@ class Category(models.Model):
     description = models.TextField(blank=True)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='active')
 
+    class Meta:
+        ordering = ['name']
+
     def __str__(self):
         return self.name
 
