@@ -80,6 +80,7 @@ function CartItem({ item }) {
 
 export default function CartPage() {
   const items = useCartStore((s) => s.items)
+  const isSyncing = useCartStore((s) => s.isSyncing)
   const clearCart = useCartStore((s) => s.clearCart)
   const getTotal = useCartStore((s) => s.getTotal)
   const getItemCount = useCartStore((s) => s.getItemCount)
@@ -87,6 +88,14 @@ export default function CartPage() {
 
   const total = getTotal()
   const itemCount = getItemCount()
+
+  if (isSyncing) {
+    return (
+      <div className="py-16 px-4 flex items-center justify-center">
+        <p className="text-muted-foreground text-sm animate-pulse">Loading your cart...</p>
+      </div>
+    )
+  }
 
   if (items.length === 0) {
     return (

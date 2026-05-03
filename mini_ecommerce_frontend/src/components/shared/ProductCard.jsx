@@ -12,6 +12,7 @@ import StarRating from '@/components/shared/StarRating'
 export default function ProductCard({ product }) {
   const addItem = useCartStore((s) => s.addItem)
   const wishlisted = useWishlistStore((s) => s.items.some((i) => i.product_id === product.id))
+  const isSyncing = useWishlistStore((s) => s.isSyncing)
   const addToWishlist = useWishlistStore((s) => s.addItem)
   const addToBackend = useWishlistStore((s) => s.addToBackend)
   const removeFromWishlist = useWishlistStore((s) => s.removeItem)
@@ -84,13 +85,14 @@ export default function ProductCard({ product }) {
         {/* Wishlist button */}
         <button
           onClick={handleWishlist}
+          disabled={isSyncing}
           className={cn(
             'absolute top-2 right-2 p-1.5 rounded-full bg-background/80 backdrop-blur-sm hover:bg-background transition-colors',
-            wishlisted ? 'text-destructive' : 'text-muted-foreground hover:text-destructive',
+            isSyncing ? 'text-muted-foreground opacity-50 cursor-wait' : wishlisted ? 'text-destructive' : 'text-muted-foreground hover:text-destructive',
           )}
           aria-label={wishlisted ? 'Remove from wishlist' : 'Add to wishlist'}
         >
-          <Heart className={cn('h-4 w-4', wishlisted && 'fill-current')} />
+          <Heart className={cn('h-4 w-4', !isSyncing && wishlisted && 'fill-current')} />
         </button>
 
         {/* Out of stock overlay */}
