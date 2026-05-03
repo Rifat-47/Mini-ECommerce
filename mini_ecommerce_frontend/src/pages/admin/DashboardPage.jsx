@@ -51,7 +51,7 @@ export default function DashboardPage() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard icon={DollarSign} label="Total Revenue" value={`৳${parseFloat(overview.total_revenue || 0).toLocaleString()}`} loading={loading} />
         <StatCard icon={ShoppingBag} label="Total Orders" value={overview.total_orders ?? 0} loading={loading} />
         <StatCard icon={Users} label="Total Customers" value={overview.total_customers ?? 0} loading={loading} />

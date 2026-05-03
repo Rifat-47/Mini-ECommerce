@@ -1,10 +1,11 @@
 from datetime import timedelta
 from django.core.management.base import BaseCommand
-from django.core.mail import send_mail
+from ecommerce_backend.email_utils import send_email as _send_email
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from orders.models import Coupon
 from config.models import SiteSettings
+from notifications.utils import notify
 
 User = get_user_model()
 
@@ -62,11 +63,11 @@ class Command(BaseCommand):
                 expiry_str = coupon.expiry_date.strftime('%B %d, %Y')
 
                 if cfg.email_notifications_enabled:
-                    send_mail(
-                        subject=f'Happy Birthday, {user.first_name or "there"}! 🎂 Here\'s a gift from us',
+                    _send_email(
+                        subject=f'Happy Birthday, {user.first_name or "there"}! Here\'s a gift from us',
                         message=(
                             f'Dear {user.first_name or "Valued Customer"},\n\n'
-                            f'Wishing you a very Happy Birthday from all of us at {cfg.store_name}! 🎉\n\n'
+                            f'Wishing you a very Happy Birthday from all of us at {cfg.store_name}!\n\n'
                             f'To celebrate your special day, we\'re gifting you a personal {cfg.birthday_coupon_discount}% discount '
                             f'on your next purchase — valid for an entire month!\n\n'
                             f'  Your Birthday Coupon: {coupon.code}\n'
@@ -76,10 +77,15 @@ class Command(BaseCommand):
                             f'Hope you have a wonderful day!\n\n'
                             f'— The {cfg.store_name} Team'
                         ),
-                        from_email=cfg.from_email,
                         recipient_list=[user.email],
-                        fail_silently=False,
+                        from_email=cfg.from_email,
                     )
+                notify(
+                    user,
+                    'birthday',
+                    f'Happy Birthday, {user.first_name or "there"}! 🎂',
+                    f'Wishing you a wonderful birthday! Use code {coupon.code} for {cfg.birthday_coupon_discount}% off — valid until {expiry_str}.',
+                )
                 count += 1
             except Exception as e:
                 self.stdout.write(self.style.ERROR(f'Error processing birthday for {user.email}: {e}'))

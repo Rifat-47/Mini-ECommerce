@@ -8,6 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 import ErrorMessage from '@/components/shared/ErrorMessage'
+import DateOfBirthPicker from '@/components/shared/DateOfBirthPicker'
+import useUnsavedChanges from '@/hooks/useUnsavedChanges.jsx'
 import api from '@/api/axios'
 import useAuthStore from '@/store/authStore'
 
@@ -19,6 +21,7 @@ function ProfileTab() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
+  const { markDirty, isDirty, DiscardDialog } = useUnsavedChanges()
 
   useEffect(() => {
     api.get('/auth/profile/').then(({ data }) => {
@@ -35,7 +38,9 @@ function ProfileTab() {
     setError(null)
     setSaving(true)
     try {
-      const { data } = await api.patch('/auth/profile/', form)
+      const payload = { ...form }
+      if (!payload.date_of_birth) payload.date_of_birth = null
+      const { data } = await api.patch('/auth/profile/', payload)
       updateUser({ first_name: data.first_name, last_name: data.last_name })
       toast.success('Profile updated.')
     } catch (err) {
@@ -48,36 +53,47 @@ function ProfileTab() {
   if (loading) return <div className="py-8 text-center text-sm text-muted-foreground">Loading...</div>
 
   return (
-    <form onSubmit={handleSave} className="max-w-md space-y-4">
-      <ErrorMessage error={error} />
+    <>
+      <DiscardDialog />
+      <form onSubmit={handleSave} className="max-w-md space-y-4">
+        <ErrorMessage error={error} />
 
-      <div className="space-y-1.5">
-        <Label htmlFor="email">Email</Label>
-        <Input id="email" value={user?.email || ''} disabled className="bg-muted" />
-        <p className="text-xs text-muted-foreground">Email cannot be changed.</p>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1.5">
-          <Label htmlFor="first_name">First name</Label>
-          <Input id="first_name" value={form.first_name} onChange={(e) => setForm((f) => ({ ...f, first_name: e.target.value }))} />
+          <Label htmlFor="email">Email</Label>
+          <Input id="email" value={user?.email || ''} disabled className="bg-muted" />
+          <p className="text-xs text-muted-foreground">Email cannot be changed.</p>
         </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="first_name">First name</Label>
+            <Input id="first_name" value={form.first_name} onChange={(e) => { setForm((f) => ({ ...f, first_name: e.target.value })); markDirty() }} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="last_name">Last name</Label>
+            <Input id="last_name" value={form.last_name} onChange={(e) => { setForm((f) => ({ ...f, last_name: e.target.value })); markDirty() }} />
+          </div>
+        </div>
+
         <div className="space-y-1.5">
-          <Label htmlFor="last_name">Last name</Label>
-          <Input id="last_name" value={form.last_name} onChange={(e) => setForm((f) => ({ ...f, last_name: e.target.value }))} />
+          <Label>Date of birth</Label>
+          <DateOfBirthPicker
+            initialValue={form.date_of_birth}
+            onChange={val => { setForm(f => ({ ...f, date_of_birth: val })); markDirty() }}
+          />
         </div>
-      </div>
 
-      <div className="space-y-1.5">
-        <Label htmlFor="dob">Date of birth</Label>
-        <Input id="dob" type="date" value={form.date_of_birth} onChange={(e) => setForm((f) => ({ ...f, date_of_birth: e.target.value }))} />
-      </div>
-
-      <Button type="submit" disabled={saving}>
-        {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-        Save Changes
-      </Button>
-    </form>
+        <div className="flex items-center gap-3">
+          <Button type="submit" disabled={saving}>
+            {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            Save Changes
+          </Button>
+          {isDirty && (
+            <span className="text-xs text-muted-foreground">You have unsaved changes</span>
+          )}
+        </div>
+      </form>
+    </>
   )
 }
 
@@ -96,6 +112,11 @@ function AddressFormInline({ initial = {}, onSave, onCancel }) {
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const { markDirty, confirmClose, DiscardDialog } = useUnsavedChanges()
+
+  function field(key) {
+    return (e) => { setForm((f) => ({ ...f, [key]: e.target.value })); markDirty() }
+  }
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -114,50 +135,53 @@ function AddressFormInline({ initial = {}, onSave, onCancel }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-3 p-4 border border-border rounded-lg bg-muted/30">
-      <ErrorMessage error={error} />
-      <div className="grid grid-cols-2 gap-3">
-        <div className="col-span-2 sm:col-span-1 space-y-1">
-          <Label className="text-xs">Full name *</Label>
-          <Input name="full_name" value={form.full_name} onChange={(e) => setForm((f) => ({ ...f, full_name: e.target.value }))} required className="h-8 text-sm" />
+    <>
+      <DiscardDialog />
+      <form onSubmit={handleSubmit} className="space-y-3 p-4 border border-border rounded-lg bg-muted/30">
+        <ErrorMessage error={error} />
+        <div className="grid grid-cols-2 gap-3">
+          <div className="col-span-2 sm:col-span-1 space-y-1">
+            <Label className="text-xs">Full name <span className="text-destructive">*</span></Label>
+            <Input name="full_name" value={form.full_name} onChange={field('full_name')} required className="h-8 text-sm" />
+          </div>
+          <div className="col-span-2 sm:col-span-1 space-y-1">
+            <Label className="text-xs">Phone <span className="text-destructive">*</span></Label>
+            <Input name="phone" value={form.phone} onChange={field('phone')} required className="h-8 text-sm" />
+          </div>
+          <div className="col-span-2 space-y-1">
+            <Label className="text-xs">Address <span className="text-destructive">*</span></Label>
+            <Input value={form.address_line_1} onChange={field('address_line_1')} required className="h-8 text-sm" />
+          </div>
+          <div className="col-span-2 space-y-1">
+            <Label className="text-xs">Apt, suite, etc.</Label>
+            <Input value={form.address_line_2} onChange={field('address_line_2')} className="h-8 text-sm" />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">City <span className="text-destructive">*</span></Label>
+            <Input value={form.city} onChange={field('city')} required className="h-8 text-sm" />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">State <span className="text-destructive">*</span></Label>
+            <Input value={form.state} onChange={field('state')} required className="h-8 text-sm" />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Postal code <span className="text-destructive">*</span></Label>
+            <Input value={form.postal_code} onChange={field('postal_code')} required className="h-8 text-sm" />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Label (e.g. Home)</Label>
+            <Input value={form.label} onChange={field('label')} placeholder="Optional" className="h-8 text-sm" />
+          </div>
         </div>
-        <div className="col-span-2 sm:col-span-1 space-y-1">
-          <Label className="text-xs">Phone *</Label>
-          <Input name="phone" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} required className="h-8 text-sm" />
+        <div className="flex gap-2 pt-1">
+          <Button type="submit" size="sm" disabled={loading}>
+            {loading && <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />}
+            {initial.id ? 'Update' : 'Save'}
+          </Button>
+          <Button type="button" variant="outline" size="sm" onClick={() => confirmClose(onCancel)}>Cancel</Button>
         </div>
-        <div className="col-span-2 space-y-1">
-          <Label className="text-xs">Address *</Label>
-          <Input value={form.address_line_1} onChange={(e) => setForm((f) => ({ ...f, address_line_1: e.target.value }))} required className="h-8 text-sm" />
-        </div>
-        <div className="col-span-2 space-y-1">
-          <Label className="text-xs">Apt, suite, etc.</Label>
-          <Input value={form.address_line_2} onChange={(e) => setForm((f) => ({ ...f, address_line_2: e.target.value }))} className="h-8 text-sm" />
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs">City *</Label>
-          <Input value={form.city} onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))} required className="h-8 text-sm" />
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs">State *</Label>
-          <Input value={form.state} onChange={(e) => setForm((f) => ({ ...f, state: e.target.value }))} required className="h-8 text-sm" />
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs">Postal code *</Label>
-          <Input value={form.postal_code} onChange={(e) => setForm((f) => ({ ...f, postal_code: e.target.value }))} required className="h-8 text-sm" />
-        </div>
-        <div className="space-y-1">
-          <Label className="text-xs">Label (e.g. Home)</Label>
-          <Input value={form.label} onChange={(e) => setForm((f) => ({ ...f, label: e.target.value }))} placeholder="Optional" className="h-8 text-sm" />
-        </div>
-      </div>
-      <div className="flex gap-2 pt-1">
-        <Button type="submit" size="sm" disabled={loading}>
-          {loading && <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />}
-          {initial.id ? 'Update' : 'Save'}
-        </Button>
-        <Button type="button" variant="outline" size="sm" onClick={onCancel}>Cancel</Button>
-      </div>
-    </form>
+      </form>
+    </>
   )
 }
 
@@ -310,19 +334,19 @@ function SecurityTab() {
       <ErrorMessage error={error} />
 
       <div className="space-y-1.5">
-        <Label htmlFor="old_password">Current password</Label>
+        <Label htmlFor="old_password">Current password <span className="text-destructive">*</span></Label>
         <Input id="old_password" type="password" value={form.old_password} onChange={(e) => setForm((f) => ({ ...f, old_password: e.target.value }))} required autoComplete="current-password" />
       </div>
 
       <Separator />
 
       <div className="space-y-1.5">
-        <Label htmlFor="new_password">New password</Label>
+        <Label htmlFor="new_password">New password <span className="text-destructive">*</span></Label>
         <Input id="new_password" type="password" placeholder="Min. 8 characters" value={form.new_password} onChange={(e) => setForm((f) => ({ ...f, new_password: e.target.value }))} required autoComplete="new-password" />
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="confirm_password">Confirm new password</Label>
+        <Label htmlFor="confirm_password">Confirm new password <span className="text-destructive">*</span></Label>
         <Input id="confirm_password" type="password" value={form.confirm_password} onChange={(e) => setForm((f) => ({ ...f, confirm_password: e.target.value }))} required autoComplete="new-password" />
       </div>
 
@@ -409,7 +433,7 @@ function PrivacyTab() {
             <p className="text-sm font-medium text-destructive">Confirm account deletion</p>
             <ErrorMessage error={deleteError} />
             <div className="space-y-1.5">
-              <Label htmlFor="delete_password" className="text-sm">Enter your password to confirm</Label>
+              <Label htmlFor="delete_password" className="text-sm">Enter your password to confirm <span className="text-destructive">*</span></Label>
               <Input
                 id="delete_password"
                 type="password"

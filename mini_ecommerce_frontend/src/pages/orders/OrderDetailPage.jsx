@@ -244,7 +244,7 @@ export default function OrderDetailPage() {
 
       {/* Invoice viewer modal */}
       <Dialog open={!!invoiceBlobUrl} onOpenChange={(open) => { if (!open) handleCloseInvoice() }}>
-        <DialogContent className="max-w-4xl w-full h-[90vh] flex flex-col p-0 gap-0">
+        <DialogContent className="max-w-[98vw] sm:max-w-4xl w-full h-[90vh] flex flex-col p-0 gap-0">
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
             <span className="font-semibold text-sm">Invoice — Order #{id}</span>

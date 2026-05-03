@@ -74,6 +74,7 @@ const AdminReturnsPage   = () => import('@/pages/admin/ReturnsPage')
 const AdminPaymentsPage  = () => import('@/pages/admin/PaymentsPage')
 const AdminCategoriesPage = () => import('@/pages/admin/CategoriesPage')
 const AdminAuditLogPage       = () => import('@/pages/admin/AuditLogPage')
+const AdminEmailLogsPage      = () => import('@/pages/admin/EmailLogsPage')
 const AdminManagementPage     = () => import('@/pages/admin/AdminManagementPage')
 const AdminSettingsPage       = () => import('@/pages/admin/SettingsPage')
 const NotFoundPage            = () => import('@/pages/NotFoundPage')
@@ -118,8 +119,9 @@ const router = createBrowserRouter([
           {
             element: <SuperAdminRoute />,
             children: [
-              { path: '/admin/audit-log', element: wrap(AdminAuditLogPage) },
-              { path: '/admin/admins',    element: wrap(AdminManagementPage) },
+              { path: '/admin/audit-log',  element: wrap(AdminAuditLogPage) },
+              { path: '/admin/email-logs', element: wrap(AdminEmailLogsPage) },
+              { path: '/admin/admins',     element: wrap(AdminManagementPage) },
             ],
           },
         ],

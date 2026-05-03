@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand
-from django.core.mail import send_mail
 from django.contrib.auth import get_user_model
 from catalog.models import Product, LOW_STOCK_THRESHOLD
+from ecommerce_backend.email_utils import send_email as _send_email
 
 User = get_user_model()
 
@@ -22,7 +22,9 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING('No active superadmin users found. No emails sent.'))
             return
 
-        # Build the email body
+        from config.models import SiteSettings
+        cfg = SiteSettings.get()
+
         product_lines = '\n'.join(
             f'  - {p.name} (ID: {p.id}) — {p.stock} unit(s) remaining'
             for p in low_stock_products
@@ -34,19 +36,13 @@ class Command(BaseCommand):
             f'of {LOW_STOCK_THRESHOLD} units and require attention:\n\n'
             f'{product_lines}\n\n'
             f'Please restock them at your earliest convenience.\n\n'
-            f'— E-Commerce System'
+            f'— {cfg.store_name}'
         )
 
         count = 0
         for admin in superadmins:
             try:
-                send_mail(
-                    subject,
-                    message,
-                    'noreply@ecommerce.com',
-                    [admin.email],
-                    fail_silently=False,
-                )
+                _send_email(subject, message, [admin.email], from_email=cfg.from_email)
                 count += 1
             except Exception as e:
                 self.stdout.write(self.style.ERROR(f'Error sending alert to {admin.email}: {e}'))

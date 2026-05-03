@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.views import APIView
 from django.contrib.auth import get_user_model
-from django.core.mail import send_mail
+from ecommerce_backend.email_utils import send_mail_async as _send_async
 from django.db import models
 from django.db.models import Sum, Count, F
 import csv
@@ -92,12 +92,11 @@ class OrderCancelView(APIView):
         from config.models import SiteSettings
         cfg = SiteSettings.get()
         if cfg.email_notifications_enabled:
-            send_mail(
+            _send_async(
                 'Order Cancellation Confirmation',
                 f'Your order #{order.id} has been successfully cancelled.\nYour stock has been restored.',
                 cfg.from_email,
                 [request.user.email],
-                fail_silently=True,
             )
         notify(request.user, 'order_cancelled', f'Order #{order.id} Cancelled',
                f'Your order #{order.id} has been successfully cancelled.')
@@ -272,7 +271,7 @@ class ReturnRequestView(APIView):
 
         cfg_mail = SiteSettings.get()
         if cfg_mail.email_notifications_enabled:
-            send_mail(
+            _send_async(
                 f'Return Request Received — Order #{order.id}',
                 (
                     f'Hi {order.user.first_name or order.user.email},\n\n'
@@ -283,7 +282,6 @@ class ReturnRequestView(APIView):
                 ),
                 cfg_mail.from_email,
                 [order.user.email],
-                fail_silently=True,
             )
         notify(order.user, 'return_received', f'Return Request Received — Order #{order.id}',
                f'We have received your return request for Order #{order.id}. We will respond within 2 business days.')
@@ -353,7 +351,7 @@ class AdminRefundMarkView(APIView):
             from config.models import SiteSettings
             cfg_rf = SiteSettings.get()
             if cfg_rf.email_notifications_enabled:
-                send_mail(
+                _send_async(
                     f'Your Refund Has Been Processed — Order #{order.id}',
                     (
                         f'Hi {order.user.first_name or order.user.email},\n\n'
@@ -363,7 +361,6 @@ class AdminRefundMarkView(APIView):
                     ),
                     cfg_rf.from_email,
                     [order.user.email],
-                    fail_silently=True,
                 )
             notify(order.user, 'refund_completed', f'Refund Processed — Order #{order.id}',
                    f'Your refund of BDT {order.total_amount} for Order #{order.id} has been processed.')
@@ -476,7 +473,7 @@ class AdminOrderBulkUpdateView(APIView):
                 cfg_bulk = SiteSettings.get()
                 if cfg_bulk.email_notifications_enabled:
                     template = STATUS_EMAIL_TEMPLATES[new_status]
-                    send_mail(
+                    _send_async(
                         template['subject'].format(order_id=order.id),
                         template['body'].format(
                             name=order.user.first_name or order.user.email,
@@ -486,7 +483,6 @@ class AdminOrderBulkUpdateView(APIView):
                         ),
                         cfg_bulk.from_email,
                         [order.user.email],
-                        fail_silently=True,
                     )
             if order.user:
                 notify(order.user, 'order_status', f'Order #{order.id} — {new_status}',

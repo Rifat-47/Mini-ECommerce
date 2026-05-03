@@ -82,6 +82,37 @@ const useCartStore = create((set, get) => ({
 
   getItemCount: () => get().items.reduce((sum, i) => sum + i.quantity, 0),
 
+  // Called after a backend-side cart operation (e.g. move from wishlist):
+  // inserts or updates a cart item using the CartItemSerializer response shape.
+  // Does NOT write to localStorage — authenticated cart lives in memory only.
+  addBackendCartItem: (backendItem, image = null) => {
+    const items = get().items
+    const existing = items.find((i) => i.product_id === backendItem.product)
+    let updated
+    if (existing) {
+      updated = items.map((i) =>
+        i.product_id === backendItem.product
+          ? { ...i, quantity: backendItem.quantity, cartItemId: backendItem.id }
+          : i,
+      )
+    } else {
+      updated = [
+        ...items,
+        {
+          product_id: backendItem.product,
+          name: backendItem.product_name,
+          price: backendItem.product_price,
+          discount_percentage: backendItem.product_discount_percentage,
+          stock: backendItem.product_stock,
+          image,
+          quantity: backendItem.quantity,
+          cartItemId: backendItem.id,
+        },
+      ]
+    }
+    set({ items: updated })
+  },
+
   // Called on login: merge LocalStorage cart with backend cart
   syncOnLogin: async () => {
     set({ isSyncing: true })

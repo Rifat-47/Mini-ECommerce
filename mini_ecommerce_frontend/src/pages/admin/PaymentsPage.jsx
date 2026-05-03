@@ -135,7 +135,7 @@ export default function PaymentsPage() {
       <h1 className="text-2xl font-bold">Payments</h1>
 
       <Select value={statusFilter || 'all'} onValueChange={v => setParam('status', v === 'all' ? '' : v)}>
-        <SelectTrigger className="w-44 h-9"><SelectValue placeholder="Filter by status" /></SelectTrigger>
+        <SelectTrigger className="w-full sm:w-44 h-9"><SelectValue placeholder="Filter by status" /></SelectTrigger>
         <SelectContent>
           <SelectItem value="all">All statuses</SelectItem>
           {PAYMENT_STATUSES.map(s => (

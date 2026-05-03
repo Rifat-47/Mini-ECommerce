@@ -16,9 +16,10 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import ErrorMessage from '@/components/shared/ErrorMessage'
 import LoadingSpinner from '@/components/shared/LoadingSpinner'
+import useUnsavedChanges from '@/hooks/useUnsavedChanges.jsx'
 import api from '@/api/axios'
 
-function CategoryForm({ initial, onSave, onClose }) {
+function CategoryForm({ initial, onSave, onClose, markDirty, confirmClose }) {
   const isEdit = !!initial?.id
   const [form, setForm] = useState({
     name: initial?.name || '',
@@ -46,44 +47,46 @@ function CategoryForm({ initial, onSave, onClose }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <ErrorMessage error={error} />
-      <div className="space-y-1.5">
-        <Label>Name *</Label>
-        <Input
-          value={form.name}
-          onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-          required
-          placeholder="e.g. Electronics"
-        />
-      </div>
-      <div className="space-y-1.5">
-        <Label>Description</Label>
-        <Textarea
-          value={form.description}
-          onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-          placeholder="Optional description"
-          rows={3}
-        />
-      </div>
-      <div className="space-y-1.5">
-        <Label>Status</Label>
-        <Select value={form.status} onValueChange={v => setForm(f => ({ ...f, status: v }))}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="inactive">Inactive</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      <DialogFooter>
-        <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-        <Button type="submit" disabled={saving}>
-          {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-          {isEdit ? 'Update' : 'Create'}
-        </Button>
-      </DialogFooter>
-    </form>
+    <>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <ErrorMessage error={error} />
+        <div className="space-y-1.5">
+          <Label>Name *</Label>
+          <Input
+            value={form.name}
+            onChange={e => { setForm(f => ({ ...f, name: e.target.value })); markDirty() }}
+            required
+            placeholder="e.g. Electronics"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Description</Label>
+          <Textarea
+            value={form.description}
+            onChange={e => { setForm(f => ({ ...f, description: e.target.value })); markDirty() }}
+            placeholder="Optional description"
+            rows={3}
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Status</Label>
+          <Select value={form.status} onValueChange={v => { setForm(f => ({ ...f, status: v })); markDirty() }}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="inactive">Inactive</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => confirmClose(onClose)}>Cancel</Button>
+          <Button type="submit" disabled={saving}>
+            {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            {isEdit ? 'Update' : 'Create'}
+          </Button>
+        </DialogFooter>
+      </form>
+    </>
   )
 }
 
@@ -94,6 +97,7 @@ export default function CategoriesPage() {
   const [showForm, setShowForm] = useState(false)
   const [deleteId, setDeleteId] = useState(null)
   const [deleting, setDeleting] = useState(false)
+  const { markDirty, confirmClose, DiscardDialog, reset } = useUnsavedChanges()
 
   const fetchCategories = useCallback(async () => {
     setLoading(true)
@@ -125,11 +129,13 @@ export default function CategoriesPage() {
   }
 
   function openCreate() {
+    reset?.()
     setEditCategory(null)
     setShowForm(true)
   }
 
   function openEdit(category) {
+    reset?.()
     setEditCategory(category)
     setShowForm(true)
   }
@@ -210,7 +216,8 @@ export default function CategoriesPage() {
       )}
 
       {/* Create / Edit Dialog */}
-      <Dialog open={showForm} onOpenChange={o => { if (!o) closeForm() }}>
+      <DiscardDialog />
+      <Dialog open={showForm} onOpenChange={o => { if (!o) confirmClose(closeForm) }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{editCategory ? 'Edit Category' : 'Add Category'}</DialogTitle>
@@ -219,6 +226,8 @@ export default function CategoriesPage() {
             initial={editCategory}
             onSave={() => { closeForm(); fetchCategories() }}
             onClose={closeForm}
+            markDirty={markDirty}
+            confirmClose={confirmClose}
           />
         </DialogContent>
       </Dialog>

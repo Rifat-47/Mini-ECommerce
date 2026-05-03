@@ -159,7 +159,7 @@ export default function ProductListPage() {
       if (params.page && params.page !== '1') query.set('page', params.page)
 
       const { data } = await api.get(`/products/?${query}`)
-      setProducts(data.results)
+      setProducts(data.results ?? [])
       setPagination({ count: data.count, next: data.next, previous: data.previous })
     } catch {
       setProducts([])
@@ -275,7 +275,7 @@ export default function ProductListPage() {
         {/* Sort + mobile filter */}
         <div className="flex items-center gap-2">
           <Select value={params.sort} onValueChange={(v) => setParam('sort', v)}>
-            <SelectTrigger className="w-44">
+            <SelectTrigger className="w-full sm:w-44">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

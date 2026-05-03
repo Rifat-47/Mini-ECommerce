@@ -44,15 +44,15 @@ function AddressForm({ onSave, onCancel }) {
       <ErrorMessage error={error} />
       <div className="grid grid-cols-2 gap-3">
         <div className="col-span-2 sm:col-span-1">
-          <Label htmlFor="full_name" className="text-xs">Full name *</Label>
+          <Label htmlFor="full_name" className="text-xs">Full name <span className="text-destructive">*</span></Label>
           <Input id="full_name" name="full_name" value={form.full_name} onChange={handleChange} required className="mt-1 h-8 text-sm" />
         </div>
         <div className="col-span-2 sm:col-span-1">
-          <Label htmlFor="phone" className="text-xs">Phone *</Label>
+          <Label htmlFor="phone" className="text-xs">Phone <span className="text-destructive">*</span></Label>
           <Input id="phone" name="phone" value={form.phone} onChange={handleChange} required className="mt-1 h-8 text-sm" />
         </div>
         <div className="col-span-2">
-          <Label htmlFor="address_line_1" className="text-xs">Address *</Label>
+          <Label htmlFor="address_line_1" className="text-xs">Address <span className="text-destructive">*</span></Label>
           <Input id="address_line_1" name="address_line_1" value={form.address_line_1} onChange={handleChange} required className="mt-1 h-8 text-sm" />
         </div>
         <div className="col-span-2">
@@ -60,15 +60,15 @@ function AddressForm({ onSave, onCancel }) {
           <Input id="address_line_2" name="address_line_2" value={form.address_line_2} onChange={handleChange} className="mt-1 h-8 text-sm" />
         </div>
         <div>
-          <Label htmlFor="city" className="text-xs">City *</Label>
+          <Label htmlFor="city" className="text-xs">City <span className="text-destructive">*</span></Label>
           <Input id="city" name="city" value={form.city} onChange={handleChange} required className="mt-1 h-8 text-sm" />
         </div>
         <div>
-          <Label htmlFor="state" className="text-xs">State / Division *</Label>
+          <Label htmlFor="state" className="text-xs">State / Division <span className="text-destructive">*</span></Label>
           <Input id="state" name="state" value={form.state} onChange={handleChange} required className="mt-1 h-8 text-sm" />
         </div>
         <div>
-          <Label htmlFor="postal_code" className="text-xs">Postal code *</Label>
+          <Label htmlFor="postal_code" className="text-xs">Postal code <span className="text-destructive">*</span></Label>
           <Input id="postal_code" name="postal_code" value={form.postal_code} onChange={handleChange} required className="mt-1 h-8 text-sm" />
         </div>
         <div>
@@ -110,8 +110,8 @@ export default function CheckoutPage() {
   const finalTotal = couponResult?.final_total ? parseFloat(couponResult.final_total) : subtotal
 
   useEffect(() => {
-    if (items.length === 0) navigate('/cart', { replace: true })
-  }, [items, navigate])
+    if (items.length === 0 && !placing) navigate('/cart', { replace: true })
+  }, [items, navigate, placing])
 
   useEffect(() => {
     api.get('/addresses/').then(({ data }) => {
@@ -158,6 +158,9 @@ export default function CheckoutPage() {
     if (!selectedAddressId) { setError({ error: 'Please select a shipping address.' }); return }
     setError(null)
     setPlacing(true)
+
+    // Step 1: create the order
+    let order
     try {
       const orderItems = items.map((i) => ({ product: i.product_id, quantity: i.quantity }))
       const body = {
@@ -165,19 +168,31 @@ export default function CheckoutPage() {
         items: orderItems,
         ...(couponResult ? { coupon_code: couponCode } : {}),
       }
-      const { data: order } = await api.post('/orders/', body)
-      clearCart()
+      const { data } = await api.post('/orders/', body)
+      order = data
+    } catch (err) {
+      setError(err.response?.data || { error: 'Failed to place order. Please try again.' })
+      setPlacing(false)
+      return
+    }
 
+    // Step 2: confirm payment — only clear the cart after this succeeds
+    try {
       if (paymentMethod === 'cod') {
         await api.post('/payments/cod/', { order_id: order.id })
+        clearCart()
         navigate(`/payment/success?order_id=${order.id}&method=cod`, { replace: true })
       } else {
         const { data: payment } = await api.post('/payments/initiate/', { order_id: order.id })
+        clearCart()
         window.location.href = payment.checkout_url
       }
     } catch (err) {
-      setError(err.response?.data || { error: 'Failed to place order. Please try again.' })
-    } finally {
+      setError(
+        err.response?.data || {
+          error: 'Your order was placed but payment could not be initiated. Go to My Orders to retry payment.',
+        },
+      )
       setPlacing(false)
     }
   }
@@ -201,7 +216,7 @@ export default function CheckoutPage() {
             <div>
               <h2 className="font-semibold mb-3 flex items-center gap-2">
                 <MapPin className="h-4 w-4 text-primary" />
-                Shipping Address
+                Shipping Address <span className="text-destructive">*</span>
               </h2>
 
               <div className="space-y-2">
@@ -287,13 +302,24 @@ export default function CheckoutPage() {
                     </Select>
                   )}
                   <div className="flex gap-2">
-                    <Input
-                      placeholder="Or enter coupon code"
-                      value={couponCode}
-                      onChange={(e) => { setCouponCode(e.target.value); setCouponError(null) }}
-                      onKeyDown={(e) => e.key === 'Enter' && handleCouponApply()}
-                      className="flex-1"
-                    />
+                    <div className="relative flex-1">
+                      <Input
+                        placeholder="Or enter coupon code"
+                        value={couponCode}
+                        onChange={(e) => { setCouponCode(e.target.value); setCouponError(null) }}
+                        onKeyDown={(e) => e.key === 'Enter' && handleCouponApply()}
+                        className={couponCode ? 'pr-8' : ''}
+                      />
+                      {couponCode && (
+                        <button
+                          type="button"
+                          onClick={() => { setCouponCode(''); setCouponError(null) }}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
                     <Button variant="outline" onClick={handleCouponApply} disabled={couponLoading || !couponCode.trim()}>
                       {couponLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Apply'}
                     </Button>
@@ -307,9 +333,9 @@ export default function CheckoutPage() {
             <div>
               <h2 className="font-semibold mb-3 flex items-center gap-2">
                 <CreditCard className="h-4 w-4 text-primary" />
-                Payment Method
+                Payment Method <span className="text-destructive">*</span>
               </h2>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <button
                   type="button"
                   onClick={() => setPaymentMethod('online')}
@@ -348,10 +374,10 @@ export default function CheckoutPage() {
 
           {/* Right: order summary */}
           <div className="lg:col-span-2">
-            <div className="bg-card border border-border rounded-xl p-5 space-y-4 sticky top-24">
+            <div className="bg-card border border-border rounded-xl p-5 space-y-4 lg:sticky lg:top-24">
               <h2 className="font-semibold">Order Summary</h2>
 
-              <div className="space-y-2 text-sm max-h-48 overflow-y-auto">
+              <div className="space-y-2 text-sm max-h-32 sm:max-h-48 overflow-y-auto">
                 {items.map((item) => {
                   const disc = parseFloat(item.discount_percentage || 0)
                   const price = parseFloat(item.price)

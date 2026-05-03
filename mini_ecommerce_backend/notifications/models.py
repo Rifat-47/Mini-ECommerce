@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from django.utils import timezone
 
 
 class Notification(models.Model):
@@ -28,3 +29,24 @@ class Notification(models.Model):
 
     def __str__(self):
         return f"[{self.type}] {self.title} → {self.user}"
+
+
+class EmailLog(models.Model):
+    STATUS_SENT   = 'sent'
+    STATUS_FAILED = 'failed'
+    STATUS_CHOICES = [
+        (STATUS_SENT,   'Sent'),
+        (STATUS_FAILED, 'Failed'),
+    ]
+
+    recipient     = models.EmailField()
+    subject       = models.CharField(max_length=255)
+    status        = models.CharField(max_length=10, choices=STATUS_CHOICES)
+    error_message = models.TextField(blank=True, default='')
+    sent_at       = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ['-sent_at']
+
+    def __str__(self):
+        return f"[{self.status}] {self.subject} → {self.recipient} ({self.sent_at:%Y-%m-%d %H:%M})"

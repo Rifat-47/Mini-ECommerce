@@ -62,7 +62,7 @@ function ReviewDialog({ returnItem, onClose, onSaved }) {
       </div>
       <ErrorMessage error={error} />
       <div className="space-y-1.5">
-        <Label>Decision</Label>
+        <Label>Decision <span className="text-destructive">*</span></Label>
         <Select value={status} onValueChange={setStatus}>
           <SelectTrigger><SelectValue placeholder="Select decision" /></SelectTrigger>
           <SelectContent>
@@ -131,7 +131,7 @@ export default function ReturnsPage() {
       </div>
 
       <Select value={statusFilter || 'all'} onValueChange={v => setParam('status', v === 'all' ? '' : v)}>
-        <SelectTrigger className="w-44 h-9"><SelectValue placeholder="Filter by status" /></SelectTrigger>
+        <SelectTrigger className="w-full sm:w-44 h-9"><SelectValue placeholder="Filter by status" /></SelectTrigger>
         <SelectContent>
           <SelectItem value="all">All statuses</SelectItem>
           <SelectItem value="pending">Pending</SelectItem>

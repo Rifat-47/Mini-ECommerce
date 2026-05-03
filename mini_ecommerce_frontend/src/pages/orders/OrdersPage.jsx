@@ -58,13 +58,13 @@ export default function OrdersPage() {
 
   return (
     <div className="py-8 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
         <h1 className="text-2xl font-bold">My Orders</h1>
         <Select
           value={status || 'all'}
           onValueChange={(v) => setParam('status', v === 'all' ? '' : v)}
         >
-          <SelectTrigger className="w-44">
+          <SelectTrigger className="w-full sm:w-44">
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
           <SelectContent>

@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import ErrorMessage from '@/components/shared/ErrorMessage'
 import LoadingSpinner from '@/components/shared/LoadingSpinner'
 import Pagination from '@/components/shared/Pagination'
+import useUnsavedChanges from '@/hooks/useUnsavedChanges.jsx'
 import api from '@/api/axios'
 import useAuthStore from '@/store/authStore'
 
@@ -19,7 +20,7 @@ const ROLE_COLORS = {
   admin: 'bg-blue-100 text-blue-800 border-blue-200',
 }
 
-function AdminForm({ onSave, onClose }) {
+function AdminForm({ onSave, onClose, markDirty, confirmClose }) {
   const [form, setForm] = useState({
     email: '',
     first_name: '',
@@ -46,60 +47,45 @@ function AdminForm({ onSave, onClose }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <ErrorMessage error={error} />
-      <div className="grid grid-cols-2 gap-3">
-        <div className="col-span-2 space-y-1.5">
-          <Label>Email *</Label>
-          <Input
-            type="email"
-            value={form.email}
-            onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-            required
-          />
+    <>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <ErrorMessage error={error} />
+        <div className="grid grid-cols-2 gap-3">
+          <div className="col-span-2 space-y-1.5">
+            <Label>Email *</Label>
+            <Input type="email" value={form.email} onChange={e => { setForm(f => ({ ...f, email: e.target.value })); markDirty() }} required />
+          </div>
+          <div className="space-y-1.5">
+            <Label>First name</Label>
+            <Input value={form.first_name} onChange={e => { setForm(f => ({ ...f, first_name: e.target.value })); markDirty() }} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Last name</Label>
+            <Input value={form.last_name} onChange={e => { setForm(f => ({ ...f, last_name: e.target.value })); markDirty() }} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Role *</Label>
+            <Select value={form.role} onValueChange={v => { setForm(f => ({ ...f, role: v })); markDirty() }}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="admin">Admin</SelectItem>
+                <SelectItem value="superadmin">Superadmin</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Password *</Label>
+            <Input type="password" value={form.password} onChange={e => { setForm(f => ({ ...f, password: e.target.value })); markDirty() }} required autoComplete="new-password" />
+          </div>
         </div>
-        <div className="space-y-1.5">
-          <Label>First name</Label>
-          <Input
-            value={form.first_name}
-            onChange={e => setForm(f => ({ ...f, first_name: e.target.value }))}
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Last name</Label>
-          <Input
-            value={form.last_name}
-            onChange={e => setForm(f => ({ ...f, last_name: e.target.value }))}
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Role *</Label>
-          <Select value={form.role} onValueChange={v => setForm(f => ({ ...f, role: v }))}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="admin">Admin</SelectItem>
-              <SelectItem value="superadmin">Superadmin</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1.5">
-          <Label>Password *</Label>
-          <Input
-            type="password"
-            value={form.password}
-            onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
-            required
-            autoComplete="new-password"
-          />
-        </div>
-      </div>
-      <DialogFooter>
-        <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-        <Button type="submit" disabled={saving}>
-          {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Create Admin
-        </Button>
-      </DialogFooter>
-    </form>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => confirmClose(onClose)}>Cancel</Button>
+          <Button type="submit" disabled={saving}>
+            {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}Create Admin
+          </Button>
+        </DialogFooter>
+      </form>
+    </>
   )
 }
 
@@ -114,6 +100,7 @@ export default function AdminManagementPage() {
   const [showForm, setShowForm] = useState(false)
   const [deleteId, setDeleteId] = useState(null)
   const [deleting, setDeleting] = useState(false)
+  const { markDirty, confirmClose, DiscardDialog, reset } = useUnsavedChanges()
 
   const fetchAdmins = useCallback(async () => {
     setLoading(true)
@@ -171,7 +158,7 @@ export default function AdminManagementPage() {
           <p className="text-sm text-muted-foreground mt-1">Manage admin and superadmin accounts.</p>
         </div>
         {isSuperAdmin() && (
-          <Button size="sm" onClick={() => setShowForm(true)}>
+          <Button size="sm" onClick={() => { reset(); setShowForm(true) }}>
             <Plus className="h-4 w-4 mr-1.5" />Add Admin
           </Button>
         )}
@@ -232,7 +219,7 @@ export default function AdminManagementPage() {
                           onValueChange={v => handleRoleChange(admin.id, v)}
                           disabled={updating === admin.id}
                         >
-                          <SelectTrigger className="h-8 w-36">
+                          <SelectTrigger className="h-8 w-28 sm:w-36">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -266,12 +253,15 @@ export default function AdminManagementPage() {
       )}
 
       {/* Create Admin Dialog */}
-      <Dialog open={showForm} onOpenChange={o => { if (!o) setShowForm(false) }}>
+      <DiscardDialog />
+      <Dialog open={showForm} onOpenChange={o => { if (!o) confirmClose(() => setShowForm(false)) }}>
         <DialogContent>
           <DialogHeader><DialogTitle>Add Admin</DialogTitle></DialogHeader>
           <AdminForm
             onSave={() => { setShowForm(false); fetchAdmins() }}
             onClose={() => setShowForm(false)}
+            markDirty={markDirty}
+            confirmClose={confirmClose}
           />
         </DialogContent>
       </Dialog>

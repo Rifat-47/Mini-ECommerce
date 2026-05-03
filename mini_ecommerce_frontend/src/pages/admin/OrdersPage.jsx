@@ -51,7 +51,7 @@ function OrderDetailModal({ orderId, onClose }) {
 
   return (
     <Dialog open={!!orderId} onOpenChange={o => { if (!o) onClose() }}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Order #{orderId}</DialogTitle>
         </DialogHeader>
@@ -75,8 +75,8 @@ function OrderDetailModal({ orderId, onClose }) {
             {/* Order Items */}
             <section className="space-y-2">
               <h3 className="font-semibold text-xs uppercase tracking-wide text-muted-foreground">Items</h3>
-              <div className="rounded-lg border border-border overflow-hidden">
-                <Table>
+              <div className="rounded-lg border border-border overflow-x-auto">
+                <Table className="min-w-full">
                   <TableHeader>
                     <TableRow>
                       <TableHead>Product</TableHead>
@@ -237,9 +237,9 @@ export default function AdminOrdersPage() {
         </div>
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <Select value={statusFilter || 'all'} onValueChange={v => setParam('status', v === 'all' ? '' : v)}>
-          <SelectTrigger className="w-44 h-9"><SelectValue placeholder="Filter by status" /></SelectTrigger>
+          <SelectTrigger className="w-full sm:w-44 h-9"><SelectValue placeholder="Filter by status" /></SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All statuses</SelectItem>
             {[...ORDER_STATUSES, 'Return-Requested', 'Return-Approved', 'Returned'].map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
@@ -251,7 +251,7 @@ export default function AdminOrdersPage() {
         <div className="flex items-center gap-2 p-2 bg-muted rounded-lg text-sm flex-wrap">
           <span className="text-muted-foreground">{selected.size} selected</span>
           <Select value={bulkStatus} onValueChange={setBulkStatus}>
-            <SelectTrigger className="h-7 w-36 text-xs"><SelectValue placeholder="Set status" /></SelectTrigger>
+            <SelectTrigger className="h-7 w-full sm:w-36 text-xs"><SelectValue placeholder="Set status" /></SelectTrigger>
             <SelectContent>{ORDER_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
           </Select>
           <Button size="sm" disabled={!bulkStatus || bulkLoading} onClick={handleBulkUpdate} className="h-7 text-xs">Apply</Button>
@@ -292,7 +292,7 @@ export default function AdminOrdersPage() {
                     <TableCell className="text-sm font-medium">৳{parseFloat(o.total_amount).toFixed(2)}</TableCell>
                     <TableCell>
                       <Select value={o.status} onValueChange={v => handleStatusChange(o.id, v)}>
-                        <SelectTrigger className={`h-7 w-36 text-xs border-0 ${STATUS_COLORS[o.status] || ''}`}>
+                        <SelectTrigger className={`h-7 w-28 sm:w-36 text-xs border-0 ${STATUS_COLORS[o.status] || ''}`}>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>{ORDER_STATUSES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>

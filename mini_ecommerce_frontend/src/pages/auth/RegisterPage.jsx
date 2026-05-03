@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import ErrorMessage from '@/components/shared/ErrorMessage'
+import DateOfBirthPicker from '@/components/shared/DateOfBirthPicker'
 import useAuthStore from '@/store/authStore'
 import useCartStore from '@/store/cartStore'
 import useWishlistStore from '@/store/wishlistStore'
@@ -39,7 +40,9 @@ export default function RegisterPage() {
     setError(null)
     setIsLoading(true)
     try {
-      await api.post('/auth/register/', form)
+      const payload = { ...form }
+      if (!payload.date_of_birth) delete payload.date_of_birth
+      await api.post('/auth/register/', payload)
       // Auto-login after registration
       await login(form.email, form.password)
       await Promise.allSettled([syncCart(), syncWishlist()])
@@ -132,14 +135,9 @@ export default function RegisterPage() {
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="date_of_birth">Date of birth</Label>
-            <Input
-              id="date_of_birth"
-              name="date_of_birth"
-              type="date"
-              value={form.date_of_birth}
-              onChange={handleChange}
-              max={new Date().toISOString().split('T')[0]}
+            <Label>Date of birth</Label>
+            <DateOfBirthPicker
+              onChange={val => setForm(prev => ({ ...prev, date_of_birth: val }))}
             />
           </div>
 

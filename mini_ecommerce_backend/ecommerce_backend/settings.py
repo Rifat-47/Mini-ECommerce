@@ -26,9 +26,19 @@ load_dotenv(BASE_DIR / '.env')
 SECRET_KEY = os.environ['SECRET_KEY']
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', 'True') == 'True'
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+
+# Production HTTPS security (Render proxy-aware)
+if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
 
 
 # Application definition
@@ -46,6 +56,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt.token_blacklist',
     'django_filters',
     'corsheaders',
+    'cloudinary',
 
     # Local apps
     'users',
@@ -59,6 +70,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -106,7 +118,7 @@ if os.environ.get('DATABASE_URL'):
 else:
     DATABASES = {
         'default': {
-            'ENGINE': 'django.db.backends.mysql',
+            'ENGINE': 'django.db.backends.postgresql',
             'NAME': os.environ['DB_NAME'],
             'USER': os.environ['DB_USER'],
             'PASSWORD': os.environ['DB_PASSWORD'],
@@ -151,15 +163,38 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+if os.environ.get('CLOUDINARY_CLOUD_NAME'):
+    import cloudinary
+    cloudinary.config(
+        cloud_name=os.environ.get('CLOUDINARY_CLOUD_NAME'),
+        api_key=os.environ.get('CLOUDINARY_API_KEY'),
+        api_secret=os.environ.get('CLOUDINARY_API_SECRET'),
+    )
+
+STORAGES = {
+    'default': {
+        'BACKEND': (
+            'ecommerce_backend.storage.CloudinaryMediaStorage'
+            if os.environ.get('CLOUDINARY_CLOUD_NAME')
+            else 'django.core.files.storage.FileSystemStorage'
+        ),
+    },
+    'staticfiles': {
+        'BACKEND': 'whitenoise.storage.CompressedStaticFilesStorage',
+    },
+}
 
 # Custom User Model
 AUTH_USER_MODEL = 'users.User'
 
 # CORS
-CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', '').split(',')
+CORS_ALLOWED_ORIGINS = [o for o in os.environ.get('CORS_ALLOWED_ORIGINS', '').split(',') if o]
+CSRF_TRUSTED_ORIGINS = [o for o in os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',') if o]
 
 # Django REST Framework
 REST_FRAMEWORK = {
@@ -202,13 +237,30 @@ SIMPLE_JWT = {
 }
 
 # Email configurations
+# Django SMTP is used as fallback when SENDGRID_API_KEY is not set (local dev with Gmail).
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
+EMAIL_TIMEOUT = 30
+EMAIL_HOST     = 'smtp.gmail.com'
+EMAIL_PORT     = 587
+EMAIL_USE_TLS  = True
+EMAIL_HOST_USER     = os.environ.get('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
-DEFAULT_FROM_EMAIL = os.environ.get('EMAIL_HOST_USER')
+DEFAULT_FROM_EMAIL  = os.environ.get('EMAIL_HOST_USER')
+
+# Mailjet — HTTP-based email delivery (no IP whitelisting required).
+# Set MAILJET_API_KEY + MAILJET_SECRET_KEY in production; app falls back to Gmail SMTP when blank.
+MAILJET_API_KEY     = os.environ.get('MAILJET_API_KEY', '')
+MAILJET_SECRET_KEY  = os.environ.get('MAILJET_SECRET_KEY', '')
+MAILJET_FROM_EMAIL  = os.environ.get('MAILJET_FROM_EMAIL', '')
+
+# Resend — kept as secondary fallback if SendGrid key is absent.
+RESEND_API_KEY    = os.environ.get('RESEND_API_KEY', '')
+RESEND_FROM_EMAIL = os.environ.get('RESEND_FROM_EMAIL', 'onboarding@resend.dev')
+
+# Cron — secret token checked by /api/internal/cron/* endpoints.
+# Generate with: python -c "import secrets; print(secrets.token_urlsafe(40))"
+# Set the same value in cron-job.org as the Authorization Bearer token.
+CRON_SECRET = os.environ.get('CRON_SECRET', '')
 
 # ShurjoPay
 SHURJOPAY_BASE_URL = os.environ.get('SHURJOPAY_BASE_URL', 'https://sandbox.shurjopayment.com')
@@ -223,3 +275,47 @@ FRONTEND_URL = os.environ.get('FRONTEND_URL', 'http://localhost:5173')
 
 # Returns — configurable via .env, will be movable to super-admin panel later
 RETURN_WINDOW_DAYS = int(os.environ.get('RETURN_WINDOW_DAYS', 7))
+
+# Logging
+LOGS_DIR = BASE_DIR / 'logs'
+LOGS_DIR.mkdir(exist_ok=True)
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+        'file': {
+            'class': 'logging.handlers.TimedRotatingFileHandler',
+            'filename': LOGS_DIR / 'django.log',
+            'when': 'midnight',
+            'backupCount': 14,
+            'formatter': 'verbose',
+        },
+    },
+    'root': {
+        'handlers': ['console', 'file'],
+        'level': 'WARNING',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console', 'file'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+        'ecommerce_backend.email_utils': {
+            'handlers': ['console', 'file'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+    },
+}

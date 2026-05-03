@@ -1,15 +1,16 @@
 from collections import defaultdict
 from decimal import Decimal
 from rest_framework import serializers
-from django.core.mail import send_mail
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from .models import Order, OrderItem, Coupon, ReturnRequest
 from catalog.models import Product, Category
+from catalog.serializers import _absolute_url
 from catalog.stock_utils import record_stock_movement
 from cart.models import CartItem
 from users.models import UserAddress
 from notifications.utils import notify
+from ecommerce_backend.email_utils import send_mail_async as _email_async
 
 User = get_user_model()
 
@@ -29,6 +30,9 @@ class CouponSerializer(serializers.ModelSerializer):
 
     def get_user_email(self, obj):
         return obj.user.email if obj.user else None
+
+    def validate_code(self, value):
+        return value.strip().upper()
 
     class Meta:
         model = Coupon
@@ -93,7 +97,7 @@ class CouponValidateSerializer(serializers.Serializer):
         category_ids = set(attrs.get('category_ids', []))
 
         try:
-            coupon = Coupon.objects.prefetch_related('applicable_categories').get(code=code)
+            coupon = Coupon.objects.prefetch_related('applicable_categories').get(code__iexact=code)
         except Coupon.DoesNotExist:
             raise serializers.ValidationError({"code": "Invalid coupon code."})
 
@@ -112,8 +116,8 @@ class OrderItemSerializer(serializers.ModelSerializer):
     def get_product_image(self, obj):
         request = self.context.get('request')
         image = obj.product.images.filter(is_primary=True).first() or obj.product.images.first()
-        if image and request:
-            return request.build_absolute_uri(image.image.url)
+        if image:
+            return _absolute_url(image.image.url, request)
         return None
 
     def validate_quantity(self, value):
@@ -190,7 +194,7 @@ class OrderSerializer(serializers.ModelSerializer):
         if coupon_code:
             user = self.context['request'].user
             try:
-                coupon = Coupon.objects.prefetch_related('applicable_categories').get(code=coupon_code)
+                coupon = Coupon.objects.prefetch_related('applicable_categories').get(code__iexact=coupon_code)
             except Coupon.DoesNotExist:
                 raise serializers.ValidationError({"coupon_code": "Invalid coupon code."})
 
@@ -214,13 +218,13 @@ class OrderSerializer(serializers.ModelSerializer):
 
             attrs['_coupon'] = coupon
 
-        # Stock validation — aggregate quantities per product to handle duplicates,
-        # use select_for_update to prevent race conditions.
+        # Stock validation — aggregate quantities per product to handle duplicates.
+        # select_for_update is deferred to create() which runs inside a transaction.
         items = attrs.get('items', [])
         product_ids = [item['product'].pk for item in items]
         from catalog.models import Product as ProductModel
-        locked_products = {
-            p.pk: p for p in ProductModel.objects.select_for_update().filter(pk__in=product_ids)
+        products_by_id = {
+            p.pk: p for p in ProductModel.objects.filter(pk__in=product_ids)
         }
         qty_needed = defaultdict(int)
         for item in items:
@@ -228,7 +232,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
         errors = []
         for pid, needed in qty_needed.items():
-            product = locked_products[pid]
+            product = products_by_id[pid]
             if product.stock < needed:
                 errors.append(f"'{product.name}' only has {product.stock} unit(s) in stock.")
         if errors:
@@ -244,9 +248,16 @@ class OrderSerializer(serializers.ModelSerializer):
 
         order = Order.objects.create(user=user, **validated_data)
 
+        # Re-fetch products under lock inside the transaction to prevent race conditions
+        from catalog.models import Product as ProductModel
+        product_ids = [item['product'].pk for item in items_data]
+        locked_products = {
+            p.pk: p for p in ProductModel.objects.select_for_update().filter(pk__in=product_ids)
+        }
+
         subtotal = Decimal('0.00')
         for item_data in items_data:
-            product = item_data['product']
+            product = locked_products[item_data['product'].pk]
             quantity = item_data['quantity']
             unit_price = product.price - (product.price * product.discount_percentage / 100)
             if unit_price < 0:
@@ -300,23 +311,35 @@ class OrderSerializer(serializers.ModelSerializer):
         # Clear the user's cart after successful checkout
         CartItem.objects.filter(user=user).delete()
 
-        from config.models import SiteSettings
-        cfg = SiteSettings.get()
-        if cfg.email_notifications_enabled:
-            send_mail(
-                'Order Confirmation',
-                (
-                    f'Hi {user.first_name or user.email},\n\n'
-                    f'Your order #{order.id} has been placed successfully!\n'
-                    f'Total: {cfg.currency} {order.total_amount}\n\n'
-                    f'— The {cfg.store_name} Team'
-                ),
-                cfg.from_email,
-                [user.email],
-                fail_silently=True,
-            )
-        notify(user, 'order_placed', f'Order #{order.id} Placed',
-               f'Your order #{order.id} has been placed successfully! Total: BDT {order.total_amount}.')
+        # Capture values needed by the post-commit callback before the
+        # transaction closes (avoids lazy-loading on a potentially stale instance).
+        order_id = order.id
+        order_total = order.total_amount
+        user_email = user.email
+        user_name = user.first_name or user.email
+
+        def _send_confirmation():
+            from config.models import SiteSettings
+            cfg = SiteSettings.get()
+            notify(user, 'order_placed', f'Order #{order_id} Placed',
+                   f'Your order #{order_id} has been placed successfully! Total: BDT {order_total}.')
+            if cfg.email_notifications_enabled:
+                _email_async(
+                    'Order Confirmation',
+                    (
+                        f'Hi {user_name},\n\n'
+                        f'Your order #{order_id} has been placed successfully!\n'
+                        f'Total: {cfg.currency} {order_total}\n\n'
+                        f'— The {cfg.store_name} Team'
+                    ),
+                    cfg.from_email,
+                    [user_email],
+                )
+
+        # Run email + notification after the transaction commits so that:
+        # 1. DB locks on products/order are released before SMTP starts.
+        # 2. If the transaction rolls back, no confirmation is sent.
+        transaction.on_commit(_send_confirmation)
 
         return order
 
@@ -384,7 +407,7 @@ class AdminOrderUpdateSerializer(serializers.ModelSerializer):
             cfg = SiteSettings.get()
             if cfg.email_notifications_enabled:
                 template = STATUS_EMAIL_TEMPLATES[new_status]
-                send_mail(
+                _email_async(
                     template['subject'].format(order_id=instance.id),
                     template['body'].format(
                         name=_user_name(instance.user),
@@ -394,7 +417,6 @@ class AdminOrderUpdateSerializer(serializers.ModelSerializer):
                     ),
                     cfg.from_email,
                     [instance.user.email],
-                    fail_silently=True,
                 )
 
         if status_changed:
@@ -446,7 +468,7 @@ class AdminReturnUpdateSerializer(serializers.ModelSerializer):
                     from config.models import SiteSettings
                     cfg = SiteSettings.get()
                     if cfg.email_notifications_enabled:
-                        send_mail(
+                        _email_async(
                             f'Your Return Request Has Been Approved — Order #{order.id}',
                             (
                                 f'Hi {_user_name(order.user)},\n\n'
@@ -457,7 +479,6 @@ class AdminReturnUpdateSerializer(serializers.ModelSerializer):
                             ),
                             cfg.from_email,
                             [order.user.email],
-                            fail_silently=True,
                         )
                     notify(order.user, 'return_approved', f'Return Approved — Order #{order.id}',
                            f'Your return request for Order #{order.id} has been approved. Refund is being processed.')
@@ -469,7 +490,7 @@ class AdminReturnUpdateSerializer(serializers.ModelSerializer):
                     from config.models import SiteSettings
                     cfg = SiteSettings.get()
                     if cfg.email_notifications_enabled:
-                        send_mail(
+                        _email_async(
                             f'Your Return Request Has Been Rejected — Order #{order.id}',
                             (
                                 f'Hi {_user_name(order.user)},\n\n'
@@ -480,7 +501,6 @@ class AdminReturnUpdateSerializer(serializers.ModelSerializer):
                             ),
                             cfg.from_email,
                             [order.user.email],
-                            fail_silently=True,
                         )
                     notify(order.user, 'return_rejected', f'Return Rejected — Order #{order.id}',
                            f'Your return request for Order #{order.id} has been rejected. Reason: {instance.admin_note or "No reason provided."}')

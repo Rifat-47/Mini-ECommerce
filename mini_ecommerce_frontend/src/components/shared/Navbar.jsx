@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import useAuthStore from '@/store/authStore'
 import useCartStore from '@/store/cartStore'
+import useWishlistStore from '@/store/wishlistStore'
 import useNotificationStore from '@/store/notificationStore'
 import useThemeStore from '@/store/themeStore'
 import useSettingsStore from '@/store/settingsStore'
@@ -25,6 +26,7 @@ export default function Navbar() {
   const [searchParams] = useSearchParams()
   const { user, accessToken, logout } = useAuthStore()
   const cartCount = useCartStore((s) => s.items.reduce((sum, i) => sum + i.quantity, 0))
+  const wishlistCount = useWishlistStore((s) => s.items.length)
   const { unreadCount, notifications, isLoading, fetchUnreadCount, fetchNotifications, markRead, markAllRead } = useNotificationStore()
   const { theme, toggle } = useThemeStore()
   const storeName = useSettingsStore(s => s.settings.store_name)
@@ -189,6 +191,24 @@ export default function Navbar() {
                 : <Moon className="h-5 w-5" />}
             </Button>
 
+            {/* Wishlist (logged in only) */}
+            {accessToken && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="relative"
+                onClick={() => navigate('/wishlist')}
+                aria-label="Wishlist"
+              >
+                <Heart className="h-5 w-5" />
+                {wishlistCount > 0 && (
+                  <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs bg-primary">
+                    {wishlistCount > 99 ? '99+' : wishlistCount}
+                  </Badge>
+                )}
+              </Button>
+            )}
+
             {/* Cart */}
             <Button
               variant="ghost"
@@ -225,7 +245,7 @@ export default function Navbar() {
 
                 {/* Notification panel */}
                 {notifOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-popover border border-border rounded-xl shadow-lg z-50 overflow-hidden">
+                  <div className="fixed sm:absolute inset-x-2 sm:inset-x-auto top-[4.5rem] sm:top-full sm:right-0 sm:mt-2 sm:w-96 bg-popover border border-border rounded-xl shadow-lg z-50 overflow-hidden">
                     {/* Header */}
                     <div className="flex items-center justify-between px-4 py-3 border-b border-border">
                       <span className="font-semibold text-sm">Notifications</span>
@@ -249,7 +269,7 @@ export default function Navbar() {
                     </div>
 
                     {/* Body */}
-                    <div className="max-h-96 overflow-y-auto">
+                    <div className="max-h-[60vh] sm:max-h-96 overflow-y-auto">
                       {isLoading ? (
                         <div className="py-10 text-center text-sm text-muted-foreground">Loading...</div>
                       ) : notifications.length === 0 ? (

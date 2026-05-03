@@ -79,7 +79,7 @@ export default function LoginPage() {
         {step === 'credentials' ? (
           <form onSubmit={handleCredentialsSubmit} className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">Email <span className="text-destructive">*</span></Label>
               <Input
                 id="email"
                 type="email"
@@ -94,7 +94,7 @@ export default function LoginPage() {
 
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">Password <span className="text-destructive">*</span></Label>
                 <Link
                   to="/forgot-password"
                   className="text-xs text-primary hover:underline"
@@ -132,7 +132,7 @@ export default function LoginPage() {
         ) : (
           <form onSubmit={handleTwoFaSubmit} className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="code">Authenticator Code</Label>
+              <Label htmlFor="code">Authenticator Code <span className="text-destructive">*</span></Label>
               <Input
                 id="code"
                 type="text"

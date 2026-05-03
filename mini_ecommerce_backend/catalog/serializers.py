@@ -4,6 +4,14 @@ from orders.models import Order
 from .models import Category, Product, ProductImage, Review, StockMovement, MAX_IMAGES_PER_PRODUCT
 
 
+def _absolute_url(url, request):
+    if not url:
+        return url
+    if url.startswith('http://') or url.startswith('https://'):
+        return url
+    return request.build_absolute_uri(url) if request else url
+
+
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
@@ -59,7 +67,7 @@ class ProductSerializer(serializers.ModelSerializer):
         return [
             {
                 'id': img.id,
-                'image': request.build_absolute_uri(img.image.url) if request else img.image.url,
+                'image': _absolute_url(img.image.url, request),
                 'is_primary': img.is_primary,
                 'uploaded_at': img.uploaded_at,
             }
@@ -98,12 +106,12 @@ class ReviewSerializer(serializers.ModelSerializer):
         if self.instance is None:
             has_delivered_order = Order.objects.filter(
                 user=request.user,
-                status='Delivered',
+                status__in=['Delivered', 'Return-Requested', 'Return-Approved'],
                 items__product=product
             ).exists()
             if not has_delivered_order:
                 raise serializers.ValidationError(
-                    "You can only review products from your delivered orders."
+                    "You can only review products you have received."
                 )
 
         return attrs

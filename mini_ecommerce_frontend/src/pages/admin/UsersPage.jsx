@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import ErrorMessage from '@/components/shared/ErrorMessage'
 import Pagination from '@/components/shared/Pagination'
 import LoadingSpinner from '@/components/shared/LoadingSpinner'
+import useUnsavedChanges from '@/hooks/useUnsavedChanges.jsx'
 import api from '@/api/axios'
 
 const ROLE_COLORS = {
@@ -20,7 +21,7 @@ const ROLE_COLORS = {
   superadmin: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
 }
 
-function UserForm({ initial, onSave, onClose }) {
+function UserForm({ initial, onSave, onClose, markDirty, confirmClose }) {
   const isEdit = !!initial?.id
   const [form, setForm] = useState({
     email: initial?.email || '',
@@ -50,43 +51,45 @@ function UserForm({ initial, onSave, onClose }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <ErrorMessage error={error} />
-      <div className="grid grid-cols-2 gap-3">
-        <div className="col-span-2 space-y-1.5">
-          <Label>Email *</Label>
-          <Input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} required disabled={isEdit} />
+    <>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <ErrorMessage error={error} />
+        <div className="grid grid-cols-2 gap-3">
+          <div className="col-span-2 space-y-1.5">
+            <Label>Email *</Label>
+            <Input type="email" value={form.email} onChange={e => { setForm(f => ({ ...f, email: e.target.value })); markDirty() }} required disabled={isEdit} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>First name</Label>
+            <Input value={form.first_name} onChange={e => { setForm(f => ({ ...f, first_name: e.target.value })); markDirty() }} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Last name</Label>
+            <Input value={form.last_name} onChange={e => { setForm(f => ({ ...f, last_name: e.target.value })); markDirty() }} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Role</Label>
+            <Select value={form.role} onValueChange={v => { setForm(f => ({ ...f, role: v })); markDirty() }}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="customer">Customer</SelectItem>
+                <SelectItem value="admin">Admin</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label>{isEdit ? 'New password (leave blank to keep)' : 'Password *'}</Label>
+            <Input type="password" value={form.password} onChange={e => { setForm(f => ({ ...f, password: e.target.value })); markDirty() }} required={!isEdit} autoComplete="new-password" />
+          </div>
         </div>
-        <div className="space-y-1.5">
-          <Label>First name</Label>
-          <Input value={form.first_name} onChange={e => setForm(f => ({ ...f, first_name: e.target.value }))} />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Last name</Label>
-          <Input value={form.last_name} onChange={e => setForm(f => ({ ...f, last_name: e.target.value }))} />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Role</Label>
-          <Select value={form.role} onValueChange={v => setForm(f => ({ ...f, role: v }))}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="customer">Customer</SelectItem>
-              <SelectItem value="admin">Admin</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1.5">
-          <Label>{isEdit ? 'New password (leave blank to keep)' : 'Password *'}</Label>
-          <Input type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} required={!isEdit} autoComplete="new-password" />
-        </div>
-      </div>
-      <DialogFooter>
-        <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-        <Button type="submit" disabled={saving}>
-          {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}{isEdit ? 'Update' : 'Create'}
-        </Button>
-      </DialogFooter>
-    </form>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => confirmClose(onClose)}>Cancel</Button>
+          <Button type="submit" disabled={saving}>
+            {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}{isEdit ? 'Update' : 'Create'}
+          </Button>
+        </DialogFooter>
+      </form>
+    </>
   )
 }
 
@@ -98,6 +101,7 @@ export default function UsersPage() {
   const [editUser, setEditUser] = useState(null)
   const [showForm, setShowForm] = useState(false)
   const [deleteId, setDeleteId] = useState(null)
+  const { markDirty, confirmClose, DiscardDialog, reset } = useUnsavedChanges()
 
   const roleFilter = searchParams.get('role') || ''
   const page = parseInt(searchParams.get('page') || '1')
@@ -139,11 +143,11 @@ export default function UsersPage() {
     <div className="p-6 space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">Users</h1>
-        <Button size="sm" onClick={() => { setEditUser(null); setShowForm(true) }}><Plus className="h-4 w-4 mr-1.5" />Add User</Button>
+        <Button size="sm" onClick={() => { reset(); setEditUser(null); setShowForm(true) }}><Plus className="h-4 w-4 mr-1.5" />Add User</Button>
       </div>
 
       <Select value={roleFilter || 'all'} onValueChange={v => setParam('role', v === 'all' ? '' : v)}>
-        <SelectTrigger className="w-40 h-9"><SelectValue placeholder="Filter by role" /></SelectTrigger>
+        <SelectTrigger className="w-full sm:w-40 h-9"><SelectValue placeholder="Filter by role" /></SelectTrigger>
         <SelectContent>
           <SelectItem value="all">All roles</SelectItem>
           <SelectItem value="customer">Customer</SelectItem>
@@ -175,7 +179,7 @@ export default function UsersPage() {
                     <TableCell className="hidden md:table-cell text-sm text-muted-foreground">{u.date_joined ? new Date(u.date_joined).toLocaleDateString() : '—'}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => { setEditUser(u); setShowForm(true) }} className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"><Pencil className="h-3.5 w-3.5" /></button>
+                        <button onClick={() => { reset(); setEditUser(u); setShowForm(true) }} className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"><Pencil className="h-3.5 w-3.5" /></button>
                         <button onClick={() => setDeleteId(u.id)} className="p-1.5 text-muted-foreground hover:text-destructive transition-colors"><Trash2 className="h-3.5 w-3.5" /></button>
                       </div>
                     </TableCell>
@@ -188,10 +192,11 @@ export default function UsersPage() {
         </>
       )}
 
-      <Dialog open={showForm} onOpenChange={o => { if (!o) { setShowForm(false); setEditUser(null) } }}>
+      <DiscardDialog />
+      <Dialog open={showForm} onOpenChange={o => { if (!o) confirmClose(() => { setShowForm(false); setEditUser(null) }) }}>
         <DialogContent>
           <DialogHeader><DialogTitle>{editUser ? 'Edit User' : 'Add User'}</DialogTitle></DialogHeader>
-          <UserForm initial={editUser} onSave={() => { setShowForm(false); setEditUser(null); fetchUsers() }} onClose={() => { setShowForm(false); setEditUser(null) }} />
+          <UserForm initial={editUser} onSave={() => { setShowForm(false); setEditUser(null); fetchUsers() }} onClose={() => { setShowForm(false); setEditUser(null) }} markDirty={markDirty} confirmClose={confirmClose} />
         </DialogContent>
       </Dialog>
 
