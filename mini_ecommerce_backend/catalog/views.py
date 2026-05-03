@@ -87,7 +87,10 @@ class ProductViewSet(viewsets.ModelViewSet):
         user = self.request.user
         is_admin = user.is_authenticated and hasattr(user, 'role') and user.role in ('admin', 'superadmin')
 
-        qs = Product.objects.all()
+        qs = Product.objects.select_related('category').prefetch_related('images').annotate(
+            avg_rating=Avg('reviews__rating'),
+            review_count=Count('reviews', distinct=True),
+        )
         # Write operations must see all products regardless of status
         if is_admin and self.request.method not in ('GET', 'HEAD', 'OPTIONS'):
             return qs.order_by(SORT_MAP.get(sort, '-id'))
@@ -95,11 +98,8 @@ class ProductViewSet(viewsets.ModelViewSet):
         if not show_all:
             qs = qs.filter(status='active', category__status='active')
 
-        if sort in ('rating', 'popularity'):
-            qs = qs.annotate(
-                avg_rating=Avg('reviews__rating'),
-                order_count=Count('orderitem', distinct=True),
-            )
+        if sort == 'popularity':
+            qs = qs.annotate(order_count=Count('orderitem', distinct=True))
 
         order_by = SORT_MAP.get(sort, '-id')
         return qs.order_by(order_by)

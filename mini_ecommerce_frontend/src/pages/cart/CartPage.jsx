@@ -1,14 +1,33 @@
 import { Link } from 'react-router-dom'
 import { Minus, Plus, Trash2, ShoppingBag, ShoppingCart } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
+import { Skeleton } from '@/components/ui/skeleton'
 import EmptyState from '@/components/shared/EmptyState'
 import useCartStore from '@/store/cartStore'
 import useAuthStore from '@/store/authStore'
+import { getErrorMessage } from '@/lib/errors'
 
 function CartItem({ item }) {
   const updateQuantity = useCartStore((s) => s.updateQuantity)
   const removeItem = useCartStore((s) => s.removeItem)
+
+  async function handleRemove() {
+    try {
+      await removeItem(item.product_id)
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to remove item'))
+    }
+  }
+
+  async function handleUpdateQuantity(qty) {
+    try {
+      await updateQuantity(item.product_id, qty)
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to update quantity'))
+    }
+  }
 
   const discountPct = parseFloat(item.discount_percentage || 0)
   const originalPrice = parseFloat(item.price)
@@ -21,10 +40,22 @@ function CartItem({ item }) {
       <Link to={`/products/${item.product_id}`} className="shrink-0">
         <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg bg-secondary overflow-hidden">
           {item.image ? (
-            <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">No img</div>
-          )}
+            <img
+              src={item.image}
+              alt={item.name}
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none'
+                e.currentTarget.nextSibling.style.display = 'flex'
+              }}
+            />
+          ) : null}
+          <div
+            className="w-full h-full items-center justify-center text-xs text-muted-foreground"
+            style={{ display: item.image ? 'none' : 'flex' }}
+          >
+            No img
+          </div>
         </div>
       </Link>
 
@@ -45,7 +76,7 @@ function CartItem({ item }) {
           {/* Quantity controls */}
           <div className="flex items-center border border-border rounded-lg overflow-hidden">
             <button
-              onClick={() => updateQuantity(item.product_id, item.quantity - 1)}
+              onClick={() => handleUpdateQuantity(item.quantity - 1)}
               className="px-2 py-1 hover:bg-accent transition-colors"
               aria-label="Decrease quantity"
             >
@@ -53,7 +84,7 @@ function CartItem({ item }) {
             </button>
             <span className="px-3 py-1 text-sm font-medium min-w-[2rem] text-center">{item.quantity}</span>
             <button
-              onClick={() => updateQuantity(item.product_id, item.quantity + 1)}
+              onClick={() => handleUpdateQuantity(item.quantity + 1)}
               className="px-2 py-1 hover:bg-accent transition-colors"
               disabled={item.quantity >= item.stock}
               aria-label="Increase quantity"
@@ -65,7 +96,7 @@ function CartItem({ item }) {
           <div className="flex items-center gap-3">
             <span className="text-sm font-semibold hidden sm:block">৳{lineTotal.toFixed(2)}</span>
             <button
-              onClick={() => removeItem(item.product_id)}
+              onClick={handleRemove}
               className="text-muted-foreground hover:text-destructive transition-colors"
               aria-label="Remove item"
             >
@@ -91,8 +122,29 @@ export default function CartPage() {
 
   if (isSyncing) {
     return (
-      <div className="py-16 px-4 flex items-center justify-center">
-        <p className="text-muted-foreground text-sm animate-pulse">Loading your cart...</p>
+      <div className="py-8 px-4 sm:px-6 lg:px-8 max-w-4xl mx-auto">
+        <Skeleton className="h-8 w-40 mb-6" />
+        <div className="grid lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2 bg-card border border-border rounded-xl divide-y divide-border px-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex gap-4 py-4">
+                <Skeleton className="w-24 h-24 rounded-lg shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-4 w-1/4" />
+                  <Skeleton className="h-7 w-24 mt-2" />
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="bg-card border border-border rounded-xl p-5 space-y-4 h-fit">
+            <Skeleton className="h-6 w-32" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-px w-full" />
+            <Skeleton className="h-10 w-full" />
+          </div>
+        </div>
       </div>
     )
   }
@@ -116,7 +168,13 @@ export default function CartPage() {
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">Shopping Cart</h1>
           <button
-            onClick={clearCart}
+            onClick={async () => {
+              try {
+                await clearCart()
+              } catch (err) {
+                toast.error(getErrorMessage(err, 'Failed to clear cart'))
+              }
+            }}
             className="text-sm text-muted-foreground hover:text-destructive transition-colors"
           >
             Clear cart

@@ -54,16 +54,22 @@ class ProductSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
     def get_average_rating(self, obj):
-        avg = obj.reviews.aggregate(Avg('rating'))['rating__avg']
+        avg = getattr(obj, 'avg_rating', None)
+        if avg is None:
+            from django.db.models import Avg as _Avg
+            avg = obj.reviews.aggregate(r=_Avg('rating'))['r']
         return round(avg, 1) if avg is not None else None
 
     def get_review_count(self, obj):
-        return obj.reviews.count()
+        count = getattr(obj, 'review_count', None)
+        if count is None:
+            count = obj.reviews.count()
+        return count
 
     def get_images(self, obj):
-        # Primary image first, then the rest ordered by upload time
-        images = obj.images.order_by('-is_primary', 'uploaded_at')
         request = self.context.get('request')
+        # Sort in Python to reuse the prefetch cache instead of issuing a new query
+        images = sorted(obj.images.all(), key=lambda img: (not img.is_primary, img.uploaded_at))
         return [
             {
                 'id': img.id,

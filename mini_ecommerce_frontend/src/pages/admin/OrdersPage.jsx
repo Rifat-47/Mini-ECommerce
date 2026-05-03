@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import Pagination from '@/components/shared/Pagination'
-import LoadingSpinner from '@/components/shared/LoadingSpinner'
+import TableSkeleton from '@/components/shared/TableSkeleton'
 import api from '@/api/axios'
 
 const ORDER_STATUSES = ['Pending', 'In-Progress', 'Delivered', 'Cancelled']
@@ -57,7 +57,7 @@ function OrderDetailModal({ orderId, onClose }) {
         </DialogHeader>
 
         {loading ? (
-          <div className="py-10 flex justify-center"><LoadingSpinner /></div>
+          <div className="py-4"><TableSkeleton cols={3} rows={4} /></div>
         ) : !order ? (
           <p className="text-sm text-muted-foreground py-6 text-center">Failed to load order.</p>
         ) : (
@@ -259,7 +259,7 @@ export default function AdminOrdersPage() {
         </div>
       )}
 
-      {loading ? <LoadingSpinner /> : (
+      {loading ? <TableSkeleton cols={6} /> : (
         <>
           <div className="rounded-xl border border-border overflow-hidden">
             <Table>

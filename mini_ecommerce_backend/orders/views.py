@@ -42,9 +42,12 @@ class OrderViewSet(viewsets.ModelViewSet):
         user = self.request.user
         if not user.is_authenticated:
             return Order.objects.none()
+        qs = Order.objects.select_related('user', 'coupon').prefetch_related(
+            'items__product__images',
+        )
         if hasattr(user, 'role') and user.role in ['admin', 'superadmin']:
-            return Order.objects.all()
-        return Order.objects.filter(user=user)
+            return qs
+        return qs.filter(user=user)
 
     def get_serializer_class(self):
         if self.request.method in ['PUT', 'PATCH']:
@@ -382,9 +385,9 @@ class InvoiceDownloadView(APIView):
 
         try:
             order = Order.objects.prefetch_related(
-                'items__product', 'payment'
+                'items__product__images', 'payment'
             ).get(pk=pk) if is_admin else Order.objects.prefetch_related(
-                'items__product', 'payment'
+                'items__product__images', 'payment'
             ).get(pk=pk, user=user)
         except Order.DoesNotExist:
             raise NotFound("Order not found.")
@@ -405,9 +408,9 @@ class CreditNoteDownloadView(APIView):
 
         try:
             order = Order.objects.prefetch_related(
-                'items__product', 'return_request'
+                'items__product__images', 'return_request'
             ).get(pk=pk) if is_admin else Order.objects.prefetch_related(
-                'items__product', 'return_request'
+                'items__product__images', 'return_request'
             ).get(pk=pk, user=user)
         except Order.DoesNotExist:
             raise NotFound("Order not found.")

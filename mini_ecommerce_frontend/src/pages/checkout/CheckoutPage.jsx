@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 import ErrorMessage from '@/components/shared/ErrorMessage'
@@ -94,6 +95,7 @@ export default function CheckoutPage() {
   const clearCart = useCartStore((s) => s.clearCart)
 
   const [addresses, setAddresses] = useState([])
+  const [addressesLoading, setAddressesLoading] = useState(true)
   const [selectedAddressId, setSelectedAddressId] = useState(null)
   const [showAddressForm, setShowAddressForm] = useState(false)
   const [paymentMethod, setPaymentMethod] = useState('online')
@@ -119,7 +121,7 @@ export default function CheckoutPage() {
       setAddresses(list)
       const defaultAddr = list.find((a) => a.is_default_shipping) || list[0]
       if (defaultAddr) setSelectedAddressId(defaultAddr.id)
-    }).catch(() => {})
+    }).catch(() => {}).finally(() => setAddressesLoading(false))
   }, [])
 
   useEffect(() => {
@@ -220,7 +222,13 @@ export default function CheckoutPage() {
               </h2>
 
               <div className="space-y-2">
-                {addresses.map((addr) => (
+                {addressesLoading ? (
+                  <>
+                    <Skeleton className="h-20 w-full rounded-lg" />
+                    <Skeleton className="h-20 w-full rounded-lg" />
+                  </>
+                ) : null}
+                {!addressesLoading && addresses.map((addr) => (
                   <button
                     key={addr.id}
                     type="button"

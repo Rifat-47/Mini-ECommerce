@@ -10,7 +10,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/co
 import ProductCard from '@/components/shared/ProductCard'
 import Pagination from '@/components/shared/Pagination'
 import EmptyState from '@/components/shared/EmptyState'
-import LoadingSpinner from '@/components/shared/LoadingSpinner'
+import { Skeleton } from '@/components/ui/skeleton'
 import api from '@/api/axios'
 
 const SORT_OPTIONS = [
@@ -287,15 +287,13 @@ export default function ProductListPage() {
 
           {/* Mobile filter sheet */}
           <Sheet>
-            <SheetTrigger asChild>
-              <Button variant="outline" size="icon" className="relative lg:hidden">
-                <SlidersHorizontal className="h-4 w-4" />
-                {activeFiltersCount > 0 && (
-                  <span className="absolute -top-1 -right-1 h-4 w-4 text-[10px] font-bold bg-primary text-primary-foreground rounded-full flex items-center justify-center">
-                    {activeFiltersCount}
-                  </span>
-                )}
-              </Button>
+            <SheetTrigger className="relative lg:hidden flex items-center justify-center size-8 rounded-lg border border-border bg-background hover:bg-muted hover:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50 transition-colors">
+              <SlidersHorizontal className="h-4 w-4" />
+              {activeFiltersCount > 0 && (
+                <span className="absolute -top-1 -right-1 h-4 w-4 text-[10px] font-bold bg-primary text-primary-foreground rounded-full flex items-center justify-center">
+                  {activeFiltersCount}
+                </span>
+              )}
             </SheetTrigger>
             <SheetContent side="right">
               <SheetHeader>
@@ -337,7 +335,18 @@ export default function ProductListPage() {
           )}
 
           {loading ? (
-            <LoadingSpinner />
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="bg-card border border-border rounded-xl overflow-hidden">
+                  <Skeleton className="aspect-square w-full" />
+                  <div className="p-4 space-y-2">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-2/3" />
+                    <Skeleton className="h-8 w-full mt-2" />
+                  </div>
+                </div>
+              ))}
+            </div>
           ) : products.length === 0 ? (
             <EmptyState
               icon={Package}

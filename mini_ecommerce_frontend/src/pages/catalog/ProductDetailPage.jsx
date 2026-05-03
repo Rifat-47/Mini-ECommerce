@@ -14,6 +14,7 @@ import api from '@/api/axios'
 import useCartStore from '@/store/cartStore'
 import useWishlistStore from '@/store/wishlistStore'
 import useAuthStore from '@/store/authStore'
+import { getErrorMessage } from '@/lib/errors'
 
 function ImageGallery({ images }) {
   const [activeIdx, setActiveIdx] = useState(0)
@@ -158,17 +159,21 @@ export default function ProductDetailPage() {
     toast.success(`${product.name} added to cart`)
   }
 
-  function handleWishlist() {
+  async function handleWishlist() {
     if (wishlisted) {
-      isAuthenticated() ? removeFromBackend(product.id) : removeFromWishlist(product.id)
-      toast.success('Removed from wishlist')
-    } else {
-      if (isAuthenticated()) {
-        addToBackend(product).catch(() => toast.error('Failed to add to wishlist'))
-      } else {
-        addToWishlist(product)
+      try {
+        isAuthenticated() ? await removeFromBackend(product.id) : removeFromWishlist(product.id)
+        toast.success('Removed from wishlist')
+      } catch (err) {
+        toast.error(getErrorMessage(err, 'Failed to remove from wishlist'))
       }
-      toast.success('Added to wishlist')
+    } else {
+      try {
+        isAuthenticated() ? await addToBackend(product) : addToWishlist(product)
+        toast.success('Added to wishlist')
+      } catch (err) {
+        toast.error(getErrorMessage(err, 'Failed to add to wishlist'))
+      }
     }
   }
 

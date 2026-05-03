@@ -67,15 +67,17 @@ const useCartStore = create((set, get) => ({
 
   removeItem: async (productId) => {
     if (_isLoggedIn()) {
-      const item = get().items.find((i) => i.product_id === productId)
+      const snapshot = get().items
+      set({ items: snapshot.filter((i) => i.product_id !== productId) })
+      const item = snapshot.find((i) => i.product_id === productId)
       if (item?.cartItemId) {
         try {
           await api.delete(`/cart/${item.cartItemId}/`)
-        } catch {
-          // ignore
+        } catch (err) {
+          set({ items: snapshot })
+          throw err
         }
       }
-      set({ items: get().items.filter((i) => i.product_id !== productId) })
       return
     }
 
@@ -88,19 +90,21 @@ const useCartStore = create((set, get) => ({
     if (quantity < 1) return get().removeItem(productId)
 
     if (_isLoggedIn()) {
-      const item = get().items.find((i) => i.product_id === productId)
-      if (item?.cartItemId) {
-        try {
-          await api.patch(`/cart/${item.cartItemId}/`, { quantity })
-        } catch {
-          // ignore
-        }
-      }
+      const snapshot = get().items
       set({
-        items: get().items.map((i) =>
+        items: snapshot.map((i) =>
           i.product_id === productId ? { ...i, quantity } : i,
         ),
       })
+      const item = snapshot.find((i) => i.product_id === productId)
+      if (item?.cartItemId) {
+        try {
+          await api.patch(`/cart/${item.cartItemId}/`, { quantity })
+        } catch (err) {
+          set({ items: snapshot })
+          throw err
+        }
+      }
       return
     }
 
@@ -113,12 +117,14 @@ const useCartStore = create((set, get) => ({
 
   clearCart: async () => {
     if (_isLoggedIn()) {
+      const snapshot = get().items
+      set({ items: [] })
       try {
         await api.delete('/cart/')
-      } catch {
-        // ignore
+      } catch (err) {
+        set({ items: snapshot })
+        throw err
       }
-      set({ items: [] })
       return
     }
     saveGuestCart([])
@@ -140,6 +146,7 @@ const useCartStore = create((set, get) => ({
   // inserts or updates a cart item using the CartItemSerializer response shape.
   // Does NOT write to localStorage — authenticated cart lives in memory only.
   addBackendCartItem: (backendItem, image = null) => {
+    image = image ?? backendItem.product_image ?? null
     const items = get().items
     const existing = items.find((i) => i.product_id === backendItem.product)
     let updated
@@ -202,7 +209,7 @@ const useCartStore = create((set, get) => ({
         price: item.product_price,
         discount_percentage: item.product_discount_percentage,
         stock: item.product_stock,
-        image: null,
+        image: item.product_image || null,
         quantity: item.quantity,
         cartItemId: item.id,
       }))

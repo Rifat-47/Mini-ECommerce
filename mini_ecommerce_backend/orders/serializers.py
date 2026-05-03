@@ -115,7 +115,8 @@ class OrderItemSerializer(serializers.ModelSerializer):
 
     def get_product_image(self, obj):
         request = self.context.get('request')
-        image = obj.product.images.filter(is_primary=True).first() or obj.product.images.first()
+        images = sorted(obj.product.images.all(), key=lambda img: not img.is_primary)
+        image = images[0] if images else None
         if image:
             return _absolute_url(image.image.url, request)
         return None

@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
+import { Skeleton } from '@/components/ui/skeleton'
 import ErrorMessage from '@/components/shared/ErrorMessage'
 import DateOfBirthPicker from '@/components/shared/DateOfBirthPicker'
 import useUnsavedChanges from '@/hooks/useUnsavedChanges.jsx'
@@ -50,7 +51,14 @@ function ProfileTab() {
     }
   }
 
-  if (loading) return <div className="py-8 text-center text-sm text-muted-foreground">Loading...</div>
+  if (loading) return (
+    <div className="max-w-md space-y-4 py-4">
+      <Skeleton className="h-9 w-full" />
+      <Skeleton className="h-9 w-full" />
+      <Skeleton className="h-9 w-full" />
+      <Skeleton className="h-9 w-28" />
+    </div>
+  )
 
   return (
     <>
@@ -227,7 +235,13 @@ function AddressesTab() {
     }
   }
 
-  if (loading) return <div className="py-8 text-center text-sm text-muted-foreground">Loading...</div>
+  if (loading) return (
+    <div className="max-w-xl space-y-4 py-4">
+      <Skeleton className="h-24 w-full rounded-lg" />
+      <Skeleton className="h-24 w-full rounded-lg" />
+      <Skeleton className="h-24 w-full rounded-lg" />
+    </div>
+  )
 
   return (
     <div className="max-w-xl space-y-4">

@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import ErrorMessage from '@/components/shared/ErrorMessage'
-import LoadingSpinner from '@/components/shared/LoadingSpinner'
+import TableSkeleton from '@/components/shared/TableSkeleton'
 import Pagination from '@/components/shared/Pagination'
 import useUnsavedChanges from '@/hooks/useUnsavedChanges.jsx'
 import api from '@/api/axios'
@@ -170,7 +170,7 @@ export default function AdminManagementPage() {
         </div>
       )}
 
-      {loading ? <LoadingSpinner /> : (
+      {loading ? <TableSkeleton cols={5} /> : (
         <>
           <div className="rounded-xl border border-border overflow-hidden">
             <Table>

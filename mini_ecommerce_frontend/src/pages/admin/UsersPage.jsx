@@ -11,7 +11,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import ErrorMessage from '@/components/shared/ErrorMessage'
 import Pagination from '@/components/shared/Pagination'
-import LoadingSpinner from '@/components/shared/LoadingSpinner'
+import TableSkeleton from '@/components/shared/TableSkeleton'
 import useUnsavedChanges from '@/hooks/useUnsavedChanges.jsx'
 import api from '@/api/axios'
 
@@ -155,7 +155,7 @@ export default function UsersPage() {
         </SelectContent>
       </Select>
 
-      {loading ? <LoadingSpinner /> : (
+      {loading ? <TableSkeleton cols={5} /> : (
         <>
           <div className="rounded-xl border border-border overflow-hidden">
             <Table>

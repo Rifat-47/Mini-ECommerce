@@ -12,7 +12,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import ErrorMessage from '@/components/shared/ErrorMessage'
 import Pagination from '@/components/shared/Pagination'
-import LoadingSpinner from '@/components/shared/LoadingSpinner'
+import TableSkeleton from '@/components/shared/TableSkeleton'
 import useUnsavedChanges from '@/hooks/useUnsavedChanges.jsx'
 import api from '@/api/axios'
 
@@ -233,7 +233,7 @@ export default function CouponsPage() {
         <Button size="sm" onClick={() => { reset(); setEditCoupon(null); setShowForm(true) }}><Plus className="h-4 w-4 mr-1.5" />Add Coupon</Button>
       </div>
 
-      {loading ? <LoadingSpinner /> : (
+      {loading ? <TableSkeleton cols={6} /> : (
         <>
           <div className="rounded-xl border border-border overflow-hidden">
             <Table>
