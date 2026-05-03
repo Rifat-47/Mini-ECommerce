@@ -34,6 +34,7 @@ class User(AbstractUser):
     email = models.EmailField(unique=True)
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='customer')
     date_of_birth = models.DateField(null=True, blank=True)
+    birthday_coupon_sent_year = models.SmallIntegerField(null=True, blank=True)
 
     # Account lockout
     failed_login_attempts = models.PositiveSmallIntegerField(default=0)

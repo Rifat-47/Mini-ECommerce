@@ -15,15 +15,30 @@ function saveGuestCart(items) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(items))
 }
 
+function _isLoggedIn() {
+  return !!localStorage.getItem('access_token')
+}
+
 const useCartStore = create((set, get) => ({
   items: loadGuestCart(),
   isSyncing: false,
 
-  // Add item or increment quantity (guest mode — LocalStorage only)
-  addItem: (product, quantity = 1) => {
+  addItem: async (product, quantity = 1) => {
+    if (_isLoggedIn()) {
+      try {
+        const { data } = await api.post('/cart/', { product: product.id, quantity })
+        get().addBackendCartItem(
+          data,
+          product.images?.find((img) => img.is_primary)?.image || null,
+        )
+      } catch {
+        // silently ignore — backend may return 400 if out of stock etc.
+      }
+      return
+    }
+
     const items = get().items
     const existing = items.find((i) => i.product_id === product.id)
-
     let updated
     if (existing) {
       updated = items.map((i) =>
@@ -46,19 +61,49 @@ const useCartStore = create((set, get) => ({
         },
       ]
     }
-
     saveGuestCart(updated)
     set({ items: updated })
   },
 
-  removeItem: (productId) => {
+  removeItem: async (productId) => {
+    if (_isLoggedIn()) {
+      const item = get().items.find((i) => i.product_id === productId)
+      if (item?.cartItemId) {
+        try {
+          await api.delete(`/cart/${item.cartItemId}/`)
+        } catch {
+          // ignore
+        }
+      }
+      set({ items: get().items.filter((i) => i.product_id !== productId) })
+      return
+    }
+
     const updated = get().items.filter((i) => i.product_id !== productId)
     saveGuestCart(updated)
     set({ items: updated })
   },
 
-  updateQuantity: (productId, quantity) => {
+  updateQuantity: async (productId, quantity) => {
     if (quantity < 1) return get().removeItem(productId)
+
+    if (_isLoggedIn()) {
+      const item = get().items.find((i) => i.product_id === productId)
+      if (item?.cartItemId) {
+        try {
+          await api.patch(`/cart/${item.cartItemId}/`, { quantity })
+        } catch {
+          // ignore
+        }
+      }
+      set({
+        items: get().items.map((i) =>
+          i.product_id === productId ? { ...i, quantity } : i,
+        ),
+      })
+      return
+    }
+
     const updated = get().items.map((i) =>
       i.product_id === productId ? { ...i, quantity } : i,
     )
@@ -66,7 +111,16 @@ const useCartStore = create((set, get) => ({
     set({ items: updated })
   },
 
-  clearCart: () => {
+  clearCart: async () => {
+    if (_isLoggedIn()) {
+      try {
+        await api.delete('/cart/')
+      } catch {
+        // ignore
+      }
+      set({ items: [] })
+      return
+    }
     saveGuestCart([])
     set({ items: [] })
   },
