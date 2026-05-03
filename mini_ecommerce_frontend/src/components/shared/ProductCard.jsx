@@ -50,9 +50,9 @@ export default function ProductCard({ product }) {
     e.preventDefault()
     e.stopPropagation()
     if (wishlisted) {
-      isAuthenticated ? removeFromBackend(id) : removeFromWishlist(id)
+      isAuthenticated() ? removeFromBackend(id) : removeFromWishlist(id)
     } else {
-      isAuthenticated ? addToBackend(product) : addToWishlist(product)
+      isAuthenticated() ? addToBackend(product) : addToWishlist(product)
     }
   }
 

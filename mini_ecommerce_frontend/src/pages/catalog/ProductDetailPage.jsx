@@ -160,10 +160,10 @@ export default function ProductDetailPage() {
 
   function handleWishlist() {
     if (wishlisted) {
-      isAuthenticated ? removeFromBackend(product.id) : removeFromWishlist(product.id)
+      isAuthenticated() ? removeFromBackend(product.id) : removeFromWishlist(product.id)
       toast.success('Removed from wishlist')
     } else {
-      if (isAuthenticated) {
+      if (isAuthenticated()) {
         addToBackend(product).catch(() => toast.error('Failed to add to wishlist'))
       } else {
         addToWishlist(product)
@@ -268,7 +268,7 @@ export default function ProductDetailPage() {
                 ))}
               </div>
             )}
-            {isAuthenticated && <ReviewForm productId={id} onSubmitted={fetchReviews} />}
+            {isAuthenticated() && <ReviewForm productId={id} onSubmitted={fetchReviews} />}
           </TabsContent>
         </Tabs>
       </div>

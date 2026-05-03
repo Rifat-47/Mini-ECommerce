@@ -156,7 +156,7 @@ export default function CartPage() {
                 <span>৳{total.toFixed(2)}</span>
               </div>
 
-              {isAuthenticated ? (
+              {isAuthenticated() ? (
                 <Link to="/checkout">
                   <Button className="w-full mt-2">
                     <ShoppingBag className="h-4 w-4 mr-2" />
