@@ -32,8 +32,8 @@ class User(AbstractUser):
     )
     username = None  # Remove username field
     email = models.EmailField(unique=True)
-    first_name = models.CharField(max_length=25, blank=True)
-    last_name = models.CharField(max_length=25, blank=True)
+    first_name = models.CharField(max_length=150, blank=True)
+    last_name = models.CharField(max_length=150, blank=True)
     avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='customer')
     date_of_birth = models.DateField(null=True, blank=True)
