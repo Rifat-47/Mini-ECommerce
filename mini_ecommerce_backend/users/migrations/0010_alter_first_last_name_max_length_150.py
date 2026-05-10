@@ -4,7 +4,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('users', '0008_alter_first_last_name_max_length_25'),
+        ('users', '0009_add_avatar_to_user'),
     ]
 
     operations = [
