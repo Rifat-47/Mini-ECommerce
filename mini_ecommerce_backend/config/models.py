@@ -16,6 +16,9 @@ class SiteSettings(models.Model):
     return_window_days       = models.PositiveIntegerField(default=7)
     free_shipping_threshold  = models.DecimalField(max_digits=10, decimal_places=2, default=0)
 
+    # ── Reviews ───────────────────────────────────────────────────────────────
+    review_edit_days = models.PositiveIntegerField(default=0, help_text='Days after submission a customer can edit/delete their review. 0 = unlimited.')
+
     # ── Birthday coupon ───────────────────────────────────────────────────────
     birthday_coupon_enabled         = models.BooleanField(default=True)
     birthday_coupon_discount        = models.PositiveIntegerField(default=20)

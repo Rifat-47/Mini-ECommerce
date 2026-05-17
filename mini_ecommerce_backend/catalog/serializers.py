@@ -100,11 +100,12 @@ class StockMovementSerializer(serializers.ModelSerializer):
 class ReviewSerializer(serializers.ModelSerializer):
     reviewer_name = serializers.SerializerMethodField()
     reviewer_email = serializers.SerializerMethodField()
+    can_edit = serializers.SerializerMethodField()
 
     class Meta:
         model = Review
-        fields = ['id', 'product', 'reviewer_name', 'reviewer_email', 'rating', 'comment', 'created_at', 'updated_at']
-        read_only_fields = ['id', 'product', 'reviewer_name', 'reviewer_email', 'created_at', 'updated_at']
+        fields = ['id', 'product', 'reviewer_name', 'reviewer_email', 'rating', 'comment', 'created_at', 'updated_at', 'can_edit']
+        read_only_fields = ['id', 'product', 'reviewer_name', 'reviewer_email', 'created_at', 'updated_at', 'can_edit']
         extra_kwargs = {
             'comment': {'max_length': 1000, 'required': False},
         }
@@ -114,6 +115,20 @@ class ReviewSerializer(serializers.ModelSerializer):
 
     def get_reviewer_email(self, obj):
         return obj.user.email
+
+    def get_can_edit(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return False
+        if obj.user_id != request.user.pk:
+            return False
+        from config.models import SiteSettings
+        from django.utils import timezone
+        edit_days = SiteSettings.get().review_edit_days
+        if edit_days == 0:
+            return True
+        cutoff = obj.created_at + timezone.timedelta(days=edit_days)
+        return timezone.now() <= cutoff
 
     def validate(self, attrs):
         request = self.context['request']
@@ -129,6 +144,10 @@ class ReviewSerializer(serializers.ModelSerializer):
             if not has_delivered_order:
                 raise serializers.ValidationError(
                     "You can only review products you have received."
+                )
+            if Review.objects.filter(user=request.user, product=product).exists():
+                raise serializers.ValidationError(
+                    "You have already reviewed this product."
                 )
 
         return attrs

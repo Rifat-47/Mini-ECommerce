@@ -23,6 +23,13 @@ const EMPTY_FORM = { name: '', description: '', price: '', discount_percentage: 
 const STATUS_COLORS = {
   active: 'bg-success/10 text-success',
   inactive: 'bg-muted text-muted-foreground',
+  coming_soon: 'bg-primary/10 text-primary',
+}
+
+const STATUS_LABELS = {
+  active: 'Active',
+  inactive: 'Inactive',
+  coming_soon: 'Coming Soon',
 }
 
 function ProductForm({ initial, categories, onSave, onClose, markDirty, confirmClose }) {
@@ -179,7 +186,13 @@ function ProductForm({ initial, categories, onSave, onClose, markDirty, confirmC
           <div className="space-y-1">
             <Label>Category <span className="text-destructive">*</span></Label>
             <Select value={form.category || 'none'} onValueChange={(v) => { setForm(f => ({ ...f, category: v === 'none' ? '' : v })); markDirty() }}>
-              <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue placeholder="Select category">
+                  {form.category
+                    ? (categories.find(c => String(c.id) === form.category)?.name ?? 'Select category')
+                    : 'No category'}
+                </SelectValue>
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">No category</SelectItem>
                 {categories.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}
@@ -189,10 +202,15 @@ function ProductForm({ initial, categories, onSave, onClose, markDirty, confirmC
           <div className="space-y-1">
             <Label>Status</Label>
             <Select value={form.status} onValueChange={(v) => { setForm(f => ({ ...f, status: v })); markDirty() }}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue>
+                  {STATUS_LABELS[form.status] ?? form.status}
+                </SelectValue>
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="active">Active</SelectItem>
                 <SelectItem value="inactive">Inactive</SelectItem>
+                <SelectItem value="coming_soon">Coming Soon</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -480,8 +498,8 @@ export default function ProductsPage() {
                     <TableCell className="text-sm">৳{parseFloat(p.price).toFixed(2)}</TableCell>
                     <TableCell className="hidden sm:table-cell text-sm">{p.stock}</TableCell>
                     <TableCell className="hidden sm:table-cell">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[p.status] || ''}`}>
-                        {p.status}
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${STATUS_COLORS[p.status] || ''}`}>
+                        {STATUS_LABELS[p.status] ?? p.status}
                       </span>
                     </TableCell>
                     <TableCell className="text-right">

@@ -25,15 +25,11 @@ const useCartStore = create((set, get) => ({
 
   addItem: async (product, quantity = 1) => {
     if (_isLoggedIn()) {
-      try {
-        const { data } = await api.post('/cart/', { product: product.id, quantity })
-        get().addBackendCartItem(
-          data,
-          product.images?.find((img) => img.is_primary)?.image || null,
-        )
-      } catch {
-        // silently ignore — backend may return 400 if out of stock etc.
-      }
+      const { data } = await api.post('/cart/', { product: product.id, quantity })
+      get().addBackendCartItem(
+        data,
+        product.images?.find((img) => img.is_primary)?.image || null,
+      )
       return
     }
 

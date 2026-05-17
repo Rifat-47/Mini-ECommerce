@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import EmptyState from '@/components/shared/EmptyState'
+import { cn } from '@/lib/utils'
 import useCartStore from '@/store/cartStore'
 import useAuthStore from '@/store/authStore'
 import { getErrorMessage } from '@/lib/errors'
@@ -72,28 +73,43 @@ function CartItem({ item }) {
           )}
         </div>
 
-        <div className="flex items-center justify-between mt-auto">
-          {/* Quantity controls */}
-          <div className="flex items-center border border-border rounded-lg overflow-hidden">
-            <button
-              onClick={() => handleUpdateQuantity(item.quantity - 1)}
-              className="px-2 py-1 hover:bg-accent transition-colors"
-              aria-label="Decrease quantity"
-            >
-              <Minus className="h-3.5 w-3.5" />
-            </button>
-            <span className="px-3 py-1 text-sm font-medium min-w-[2rem] text-center">{item.quantity}</span>
-            <button
-              onClick={() => handleUpdateQuantity(item.quantity + 1)}
-              className="px-2 py-1 hover:bg-accent transition-colors"
-              disabled={item.quantity >= item.stock}
-              aria-label="Increase quantity"
-            >
-              <Plus className="h-3.5 w-3.5" />
-            </button>
+        <div className="flex items-center justify-between mt-auto gap-2">
+          {/* Quantity controls + max stock hint */}
+          <div className="flex flex-col gap-1">
+            <div className="flex items-center border border-border rounded-lg overflow-hidden w-fit">
+              <button
+                onClick={() => handleUpdateQuantity(item.quantity - 1)}
+                className="px-2 py-1.5 hover:bg-accent transition-colors"
+                aria-label="Decrease quantity"
+              >
+                <Minus className="h-3.5 w-3.5" />
+              </button>
+              <span className="px-3 py-1.5 text-sm font-medium min-w-[2.5rem] text-center select-none">
+                {item.quantity}
+              </span>
+              <button
+                onClick={() => handleUpdateQuantity(item.quantity + 1)}
+                disabled={item.quantity >= item.stock}
+                className={cn(
+                  'px-2 py-1.5 transition-colors',
+                  item.quantity >= item.stock
+                    ? 'opacity-30 cursor-not-allowed'
+                    : 'hover:bg-accent',
+                )}
+                aria-label="Increase quantity"
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </button>
+            </div>
+
+            {item.quantity >= item.stock && (
+              <p className="text-xs text-amber-500 dark:text-amber-400 leading-tight">
+                Max stock reached ({item.stock} available)
+              </p>
+            )}
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 shrink-0">
             <span className="text-sm font-semibold hidden sm:block">৳{lineTotal.toFixed(2)}</span>
             <button
               onClick={handleRemove}

@@ -142,7 +142,7 @@ export default function OrderDetailPage() {
   async function handlePay() {
     setInitiatingPayment(true)
     try {
-      const { data } = await api.post('/payments/initiate/', { order_id: Number(id) })
+      const { data } = await api.post('/payments/initiate/', { order_id: id })
       window.location.href = data.checkout_url
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to initiate payment.')

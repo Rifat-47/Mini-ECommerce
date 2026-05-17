@@ -223,10 +223,27 @@ class ReviewDetailView(generics.RetrieveUpdateDestroyAPIView):
         super().check_object_permissions(request, obj)
         is_admin = request.user.role in ['admin', 'superadmin']
         is_owner = obj.user == request.user
-        if request.method in ('PUT', 'PATCH') and not is_owner:
-            raise PermissionDenied("You can only edit your own reviews.")
-        if request.method == 'DELETE' and not (is_owner or is_admin):
-            raise PermissionDenied("You do not have permission to delete this review.")
+        if request.method in ('PUT', 'PATCH'):
+            if not is_owner:
+                raise PermissionDenied("You can only edit your own reviews.")
+            self._check_edit_window(obj)
+        if request.method == 'DELETE':
+            if not (is_owner or is_admin):
+                raise PermissionDenied("You do not have permission to delete this review.")
+            if is_owner and not is_admin:
+                self._check_edit_window(obj)
+
+    def _check_edit_window(self, obj):
+        from config.models import SiteSettings
+        from django.utils import timezone
+        edit_days = SiteSettings.get().review_edit_days
+        if edit_days == 0:
+            return
+        cutoff = obj.created_at + timezone.timedelta(days=edit_days)
+        if timezone.now() > cutoff:
+            raise PermissionDenied(
+                f"Reviews can only be edited within {edit_days} day{'s' if edit_days != 1 else ''} of submission."
+            )
 
 
 # ── Search Suggestions ───────────────────────────────────────────────────────

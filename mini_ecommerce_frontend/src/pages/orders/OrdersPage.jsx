@@ -99,8 +99,8 @@ export default function OrdersPage() {
           <div className="space-y-3">
             {orders.map((order) => (
               <Link
-                key={order.id}
-                to={`/orders/${order.id}`}
+                key={order.public_id}
+                to={`/orders/${order.public_id}`}
                 className="flex items-center justify-between bg-card border border-border rounded-xl p-4 hover:shadow-sm transition-shadow gap-4"
               >
                 <div className="flex-1 min-w-0">

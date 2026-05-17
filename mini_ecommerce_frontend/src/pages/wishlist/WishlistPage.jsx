@@ -35,16 +35,20 @@ function WishlistItem({ item, isAuthenticated }) {
       }
     }
     // Guest: add to cart locally and remove from wishlist
-    addCartItem({
-      id: item.product_id,
-      name: item.name,
-      price: item.price,
-      discount_percentage: item.discount_percentage,
-      stock: item.stock,
-      images: item.image ? [{ is_primary: true, image: item.image }] : [],
-    })
-    isAuthenticated ? removeFromBackend(item.product_id) : removeItem(item.product_id)
-    toast.success('Moved to cart')
+    try {
+      await addCartItem({
+        id: item.product_id,
+        name: item.name,
+        price: item.price,
+        discount_percentage: item.discount_percentage,
+        stock: item.stock,
+        images: item.image ? [{ is_primary: true, image: item.image }] : [],
+      })
+      isAuthenticated ? removeFromBackend(item.product_id) : removeItem(item.product_id)
+      toast.success('Moved to cart')
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to move to cart'))
+    }
   }
 
   async function handleRemove() {

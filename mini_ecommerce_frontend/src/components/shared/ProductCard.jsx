@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { ShoppingCart, Heart } from 'lucide-react'
+import { ShoppingCart, Heart, Clock } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -8,10 +8,12 @@ import { cn } from '@/lib/utils'
 import useCartStore from '@/store/cartStore'
 import useWishlistStore from '@/store/wishlistStore'
 import useAuthStore from '@/store/authStore'
+import { getErrorMessage } from '@/lib/errors'
 import StarRating from '@/components/shared/StarRating'
 
 export default function ProductCard({ product }) {
   const addItem = useCartStore((s) => s.addItem)
+  const inCart = useCartStore((s) => s.items.some((i) => i.product_id === product.id))
   const wishlisted = useWishlistStore((s) => s.items.some((i) => i.product_id === product.id))
   const isSyncing = useWishlistStore((s) => s.isSyncing)
   const addToWishlist = useWishlistStore((s) => s.addItem)
@@ -28,6 +30,7 @@ export default function ProductCard({ product }) {
     average_rating,
     review_count,
     stock,
+    status,
     images = [],
   } = product
 
@@ -37,14 +40,19 @@ export default function ProductCard({ product }) {
   const effectivePrice = discountPct > 0
     ? originalPrice * (1 - discountPct / 100)
     : originalPrice
-  const inStock = stock > 0
+  const isComingSoon = status === 'coming_soon'
+  const inStock = stock > 0 && !isComingSoon
 
-  function handleAddToCart(e) {
+  async function handleAddToCart(e) {
     e.preventDefault()
     e.stopPropagation()
     if (!inStock) return
-    addItem(product, 1)
-    toast.success(`${name} added to cart`)
+    try {
+      await addItem(product, 1)
+      toast.success(`${name} added to cart`)
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Could not add to cart'))
+    }
   }
 
   function handleWishlist(e) {
@@ -97,10 +105,17 @@ export default function ProductCard({ product }) {
           <Heart className={cn('h-4 w-4', !isSyncing && wishlisted && 'fill-current')} />
         </button>
 
-        {/* Out of stock overlay */}
-        {!inStock && (
+        {/* Out of stock / Coming soon overlay */}
+        {(isComingSoon || !inStock) && (
           <div className="absolute inset-0 bg-background/70 flex items-center justify-center">
-            <span className="text-sm font-medium text-muted-foreground">Out of stock</span>
+            <span className={cn(
+              'text-xs font-semibold px-2.5 py-1 rounded-full',
+              isComingSoon
+                ? 'bg-primary/10 text-primary'
+                : 'bg-muted text-muted-foreground',
+            )}>
+              {isComingSoon ? 'Coming Soon' : 'Out of Stock'}
+            </span>
           </div>
         )}
       </div>
@@ -139,12 +154,22 @@ export default function ProductCard({ product }) {
         {/* Add to cart */}
         <Button
           size="sm"
-          className={cn('w-full mt-1', !inStock && 'opacity-50 cursor-not-allowed')}
-          disabled={!inStock}
+          disabled={isComingSoon || !inStock || inCart}
           onClick={handleAddToCart}
+          className={cn(
+            'w-full mt-1',
+            isComingSoon && 'bg-primary/10 text-primary hover:bg-primary/10 border border-primary/20 opacity-90 cursor-not-allowed',
+            !isComingSoon && !inStock && 'bg-muted text-muted-foreground hover:bg-muted opacity-60 cursor-not-allowed',
+            !isComingSoon && inStock && inCart && 'bg-muted text-muted-foreground hover:bg-muted opacity-60 cursor-not-allowed',
+          )}
         >
-          <ShoppingCart className="h-4 w-4 mr-2" />
-          {inStock ? 'Add to Cart' : 'Out of Stock'}
+          {isComingSoon
+            ? <Clock className="h-4 w-4 mr-2 shrink-0" />
+            : <ShoppingCart className="h-4 w-4 mr-2 shrink-0" />
+          }
+          <span className="truncate">
+            {isComingSoon ? 'Coming Soon' : !inStock ? 'Out of Stock' : inCart ? 'Added to Cart' : 'Add to Cart'}
+          </span>
         </Button>
       </div>
     </Link>

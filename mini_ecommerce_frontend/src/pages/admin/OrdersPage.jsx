@@ -28,17 +28,17 @@ const PAYMENT_STATUS_COLORS = {
   cancelled: 'bg-muted text-muted-foreground',
 }
 
-function OrderDetailModal({ orderId, onClose }) {
+function OrderDetailModal({ selectedOrder, onClose }) {
   const [order, setOrder] = useState(null)
   const [payment, setPayment] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!orderId) return
+    if (!selectedOrder) return
     setLoading(true)
     Promise.all([
-      api.get(`/orders/${orderId}/`),
-      api.get(`/admin/payments/?order_id=${orderId}`),
+      api.get(`/orders/${selectedOrder.public_id}/`),
+      api.get(`/admin/payments/?order_id=${selectedOrder.id}`),
     ])
       .then(([orderRes, paymentRes]) => {
         setOrder(orderRes.data)
@@ -47,13 +47,13 @@ function OrderDetailModal({ orderId, onClose }) {
       })
       .catch(() => toast.error('Failed to load order details.'))
       .finally(() => setLoading(false))
-  }, [orderId])
+  }, [selectedOrder])
 
   return (
-    <Dialog open={!!orderId} onOpenChange={o => { if (!o) onClose() }}>
+    <Dialog open={!!selectedOrder} onOpenChange={o => { if (!o) onClose() }}>
       <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Order #{orderId}</DialogTitle>
+          <DialogTitle>Order #{selectedOrder?.id}</DialogTitle>
         </DialogHeader>
 
         {loading ? (
@@ -166,7 +166,7 @@ export default function AdminOrdersPage() {
   const [selected, setSelected] = useState(new Set())
   const [bulkStatus, setBulkStatus] = useState('')
   const [bulkLoading, setBulkLoading] = useState(false)
-  const [detailOrderId, setDetailOrderId] = useState(null)
+  const [detailOrder, setDetailOrder] = useState(null)
 
   const statusFilter = searchParams.get('status') || ''
   const page = parseInt(searchParams.get('page') || '1')
@@ -195,10 +195,10 @@ export default function AdminOrdersPage() {
 
   useEffect(() => { fetchOrders() }, [fetchOrders])
 
-  async function handleStatusChange(orderId, status) {
+  async function handleStatusChange(order, newStatus) {
     try {
-      await api.patch(`/orders/${orderId}/`, { status })
-      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status } : o))
+      await api.patch(`/orders/${order.public_id}/`, { status: newStatus })
+      setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: newStatus } : o))
       toast.success('Status updated.')
     } catch { toast.error('Failed to update status.') }
   }
@@ -281,7 +281,7 @@ export default function AdminOrdersPage() {
                     <TableCell><Checkbox checked={selected.has(o.id)} onCheckedChange={v => setSelected(s => { const n = new Set(s); v ? n.add(o.id) : n.delete(o.id); return n })} /></TableCell>
                     <TableCell>
                       <button
-                        onClick={() => setDetailOrderId(o.id)}
+                        onClick={() => setDetailOrder(o)}
                         className="font-medium text-sm text-primary hover:underline"
                       >
                         #{o.id}
@@ -291,7 +291,7 @@ export default function AdminOrdersPage() {
                     <TableCell className="hidden md:table-cell text-sm text-muted-foreground">{new Date(o.created_at).toLocaleDateString()}</TableCell>
                     <TableCell className="text-sm font-medium">৳{parseFloat(o.total_amount).toFixed(2)}</TableCell>
                     <TableCell>
-                      <Select value={o.status} onValueChange={v => handleStatusChange(o.id, v)}>
+                      <Select value={o.status} onValueChange={v => handleStatusChange(o, v)}>
                         <SelectTrigger className={`h-7 w-28 sm:w-36 text-xs border-0 ${STATUS_COLORS[o.status] || ''}`}>
                           <SelectValue />
                         </SelectTrigger>
@@ -308,8 +308,8 @@ export default function AdminOrdersPage() {
       )}
 
       <OrderDetailModal
-        orderId={detailOrderId}
-        onClose={() => setDetailOrderId(null)}
+        selectedOrder={detailOrder}
+        onClose={() => setDetailOrder(null)}
       />
     </div>
   )

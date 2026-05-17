@@ -139,6 +139,13 @@ export default function SettingsPage() {
         </Field>
       </SettingSection>
 
+      {/* Reviews */}
+      <SettingSection title="Reviews">
+        <Field label="Review Edit Window (days)" id="review_edit_days" hint="How many days after submission a customer can edit or delete their review. Set to 0 for no limit.">
+          <Input id="review_edit_days" type="number" min="0" value={form.review_edit_days ?? 0} onChange={e => set('review_edit_days', parseInt(e.target.value))} disabled={disabled} className="w-28" />
+        </Field>
+      </SettingSection>
+
       {/* Birthday Coupon */}
       <SettingSection title="Birthday Coupon">
         <SwitchField

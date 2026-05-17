@@ -229,11 +229,11 @@ export default function CheckoutPage() {
     // Step 2: confirm payment — only clear the cart after this succeeds
     try {
       if (paymentMethod === 'cod') {
-        await api.post('/payments/cod/', { order_id: order.id })
+        await api.post('/payments/cod/', { order_id: order.public_id })
         clearCart()
-        navigate(`/payment/success?order_id=${order.id}&method=cod`, { replace: true })
+        navigate(`/payment/success?order_id=${order.public_id}&method=cod`, { replace: true })
       } else {
-        const { data: payment } = await api.post('/payments/initiate/', { order_id: order.id })
+        const { data: payment } = await api.post('/payments/initiate/', { order_id: order.public_id })
         clearCart()
         window.location.href = payment.checkout_url
       }
