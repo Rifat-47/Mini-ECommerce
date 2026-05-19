@@ -280,7 +280,7 @@ class AdminUserListView(generics.ListCreateAPIView):
     serializer_class = UserSerializer
 
     def get_queryset(self):
-        queryset = User.objects.all()
+        queryset = User.objects.all().order_by('-date_joined')
         role = self.request.query_params.get('role')
         if role:
             queryset = queryset.filter(role=role)
@@ -294,7 +294,7 @@ class AdminUserListView(generics.ListCreateAPIView):
 class AdminUserDetailView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = (IsAdminOrSuperAdmin,)
     serializer_class = UserSerializer
-    queryset = User.objects.all()
+    queryset = User.objects.all().order_by('-date_joined')
 
     def perform_update(self, serializer):
         incoming_role = serializer.validated_data.get('role')
