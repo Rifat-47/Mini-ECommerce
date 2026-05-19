@@ -76,14 +76,14 @@ export default function AuditLogPage() {
 
       {loading ? <TableSkeleton cols={4} /> : (
         <>
-          <div className="rounded-xl border border-border overflow-hidden">
-            <Table>
+          <div className="rounded-xl border border-border overflow-x-auto">
+            <Table className="min-w-[580px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>Action</TableHead>
-                  <TableHead className="hidden sm:table-cell">Admin</TableHead>
+                  <TableHead>Admin</TableHead>
                   <TableHead>Details</TableHead>
-                  <TableHead className="hidden md:table-cell w-36">Time</TableHead>
+                  <TableHead className="w-36">Time</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -96,9 +96,9 @@ export default function AuditLogPage() {
                         {log.action || log.action_type || '—'}
                       </span>
                     </TableCell>
-                    <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">{log.admin_email || log.admin || `#${log.admin_id}` || '—'}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{log.admin_email || log.admin || `#${log.admin_id}` || '—'}</TableCell>
                     <TableCell className="text-sm max-w-xs truncate">{log.details || log.description || log.object_repr || '—'}</TableCell>
-                    <TableCell className="hidden md:table-cell text-xs text-muted-foreground">
+                    <TableCell className="text-xs text-muted-foreground">
                       {log.timestamp || log.created_at
                         ? new Date(log.timestamp || log.created_at).toLocaleString()
                         : '—'}

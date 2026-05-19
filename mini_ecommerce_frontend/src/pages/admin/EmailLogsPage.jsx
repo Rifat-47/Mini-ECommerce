@@ -98,15 +98,15 @@ export default function EmailLogsPage() {
 
       {loading ? <TableSkeleton cols={5} /> : (
         <>
-          <div className="rounded-xl border border-border overflow-hidden">
-            <Table>
+          <div className="rounded-xl border border-border overflow-x-auto">
+            <Table className="min-w-[620px]">
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-32">Status</TableHead>
                   <TableHead>Recipient</TableHead>
                   <TableHead>Subject</TableHead>
-                  <TableHead className="hidden md:table-cell">Error</TableHead>
-                  <TableHead className="hidden sm:table-cell w-40">Time</TableHead>
+                  <TableHead>Error</TableHead>
+                  <TableHead className="w-40">Time</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -125,10 +125,10 @@ export default function EmailLogsPage() {
                     </TableCell>
                     <TableCell className="text-sm">{log.recipient}</TableCell>
                     <TableCell className="text-sm max-w-xs truncate">{log.subject}</TableCell>
-                    <TableCell className="hidden md:table-cell text-xs text-muted-foreground max-w-xs truncate">
+                    <TableCell className="text-xs text-muted-foreground max-w-xs truncate">
                       {log.error_message || '—'}
                     </TableCell>
-                    <TableCell className="hidden sm:table-cell text-xs text-muted-foreground">
+                    <TableCell className="text-xs text-muted-foreground">
                       {log.sent_at ? new Date(log.sent_at).toLocaleString() : '—'}
                     </TableCell>
                   </TableRow>

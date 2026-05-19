@@ -261,14 +261,14 @@ export default function AdminOrdersPage() {
 
       {loading ? <TableSkeleton cols={6} /> : (
         <>
-          <div className="rounded-xl border border-border overflow-hidden">
-            <Table>
+          <div className="rounded-xl border border-border overflow-x-auto">
+            <Table className="min-w-[640px]">
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-10"><Checkbox checked={allSelected} onCheckedChange={() => setSelected(allSelected ? new Set() : new Set(orders.map(o => o.id)))} /></TableHead>
                   <TableHead>Order</TableHead>
-                  <TableHead className="hidden sm:table-cell">Customer</TableHead>
-                  <TableHead className="hidden md:table-cell">Date</TableHead>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Date</TableHead>
                   <TableHead>Total</TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>
@@ -287,8 +287,8 @@ export default function AdminOrdersPage() {
                         #{o.id}
                       </button>
                     </TableCell>
-                    <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">{o.user_email || o.user || '—'}</TableCell>
-                    <TableCell className="hidden md:table-cell text-sm text-muted-foreground">{new Date(o.created_at).toLocaleDateString()}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{o.user_email || o.user || '—'}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{new Date(o.created_at).toLocaleDateString()}</TableCell>
                     <TableCell className="text-sm font-medium">৳{parseFloat(o.total_amount).toFixed(2)}</TableCell>
                     <TableCell>
                       <Select value={o.status} onValueChange={v => handleStatusChange(o, v)}>

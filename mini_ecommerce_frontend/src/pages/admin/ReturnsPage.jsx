@@ -142,12 +142,12 @@ export default function ReturnsPage() {
 
       {loading ? <TableSkeleton cols={5} /> : (
         <>
-          <div className="rounded-xl border border-border overflow-hidden">
-            <Table>
+          <div className="rounded-xl border border-border overflow-x-auto">
+            <Table className="min-w-[600px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>Order</TableHead>
-                  <TableHead className="hidden sm:table-cell">Customer</TableHead>
+                  <TableHead>Customer</TableHead>
                   <TableHead>Reason</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="w-20 text-right">Action</TableHead>
@@ -159,7 +159,7 @@ export default function ReturnsPage() {
                 ) : returns.map(r => (
                   <TableRow key={r.id}>
                     <TableCell className="font-medium text-sm">#{r.order}</TableCell>
-                    <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">{r.user_email || r.user || '—'}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{r.user_email || r.user || '—'}</TableCell>
                     <TableCell className="text-sm max-w-xs truncate">{r.reason}</TableCell>
                     <TableCell>
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[r.status] || 'bg-muted text-muted-foreground'}`}>

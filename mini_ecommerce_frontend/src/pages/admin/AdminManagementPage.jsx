@@ -195,14 +195,14 @@ export default function AdminManagementPage() {
 
       {loading ? <TableSkeleton cols={5} /> : (
         <>
-          <div className="rounded-xl border border-border overflow-hidden">
-            <Table>
+          <div className="rounded-xl border border-border overflow-x-auto">
+            <Table className="min-w-[650px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Role</TableHead>
-                  <TableHead className="hidden md:table-cell">Joined</TableHead>
+                  <TableHead>Joined</TableHead>
                   <TableHead>Change Role</TableHead>
                   {isSuperAdmin() && <TableHead className="w-16 text-right">Actions</TableHead>}
                 </TableRow>
@@ -230,7 +230,7 @@ export default function AdminManagementPage() {
                         {admin.role}
                       </span>
                     </TableCell>
-                    <TableCell className="hidden md:table-cell text-xs text-muted-foreground">
+                    <TableCell className="text-xs text-muted-foreground">
                       {admin.date_joined ? new Date(admin.date_joined).toLocaleDateString() : '—'}
                     </TableCell>
                     <TableCell>

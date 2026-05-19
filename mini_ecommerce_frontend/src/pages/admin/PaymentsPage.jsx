@@ -146,16 +146,16 @@ export default function PaymentsPage() {
 
       {loading ? <TableSkeleton cols={7} /> : (
         <>
-          <div className="rounded-xl border border-border overflow-hidden">
-            <Table>
+          <div className="rounded-xl border border-border overflow-x-auto">
+            <Table className="min-w-[700px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>Order</TableHead>
-                  <TableHead className="hidden sm:table-cell">Transaction ID</TableHead>
-                  <TableHead className="hidden md:table-cell">Method</TableHead>
+                  <TableHead>Transaction ID</TableHead>
+                  <TableHead>Method</TableHead>
                   <TableHead>Amount</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="hidden lg:table-cell">Date</TableHead>
+                  <TableHead>Date</TableHead>
                   <TableHead className="w-20 text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -167,15 +167,15 @@ export default function PaymentsPage() {
                     <TableCell className="font-medium text-sm">
                       <Link to={`/orders/${p.order}`} className="text-primary hover:underline">#{p.order}</Link>
                     </TableCell>
-                    <TableCell className="hidden sm:table-cell text-sm text-muted-foreground font-mono">{p.transaction_id || '—'}</TableCell>
-                    <TableCell className="hidden md:table-cell text-sm text-muted-foreground capitalize">{p.payment_method || '—'}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground font-mono">{p.transaction_id || '—'}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground capitalize">{p.payment_method || '—'}</TableCell>
                     <TableCell className="text-sm font-medium">৳{parseFloat(p.amount || 0).toFixed(2)}</TableCell>
                     <TableCell>
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[p.status] || 'bg-muted text-muted-foreground'}`}>
                         {p.status}
                       </span>
                     </TableCell>
-                    <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">
+                    <TableCell className="text-sm text-muted-foreground">
                       {p.created_at ? new Date(p.created_at).toLocaleDateString() : '—'}
                     </TableCell>
                     <TableCell className="text-right">

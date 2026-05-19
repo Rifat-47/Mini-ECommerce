@@ -253,15 +253,15 @@ export default function CouponsPage() {
 
       {loading ? <TableSkeleton cols={6} /> : (
         <>
-          <div className="rounded-xl border border-border overflow-hidden">
-            <Table>
+          <div className="rounded-xl border border-border overflow-x-auto">
+            <Table className="min-w-[580px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>Code</TableHead>
                   <TableHead>Type</TableHead>
                   <TableHead>Value</TableHead>
-                  <TableHead className="hidden md:table-cell">Expiry</TableHead>
-                  <TableHead className="hidden sm:table-cell">Status</TableHead>
+                  <TableHead>Expiry</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead className="w-20 text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -273,8 +273,8 @@ export default function CouponsPage() {
                     <TableCell className="font-mono font-medium text-sm">{c.code}</TableCell>
                     <TableCell className="text-sm text-muted-foreground capitalize">{c.discount_type.replace('_', ' ')}</TableCell>
                     <TableCell className="text-sm">{c.discount_type === 'percentage' ? `${c.discount_value}%` : c.discount_type === 'fixed' ? `৳${c.discount_value}` : 'Free'}</TableCell>
-                    <TableCell className="hidden md:table-cell text-sm text-muted-foreground">{c.expiry_date || '—'}</TableCell>
-                    <TableCell className="hidden sm:table-cell">
+                    <TableCell className="text-sm text-muted-foreground">{c.expiry_date || '—'}</TableCell>
+                    <TableCell>
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${c.is_active ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground'}`}>
                         {c.is_active ? 'Active' : 'Inactive'}
                       </span>

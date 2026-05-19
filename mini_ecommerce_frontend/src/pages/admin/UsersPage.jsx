@@ -73,6 +73,14 @@ function UserForm({ initial, onSave, onClose, markDirty, confirmClose }) {
     <>
       <form onSubmit={handleSubmit} noValidate className="space-y-4">
         <ErrorMessage error={error} />
+        {isEdit && (
+          <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-sm p-3 bg-muted/40 rounded-lg">
+            <span className="text-muted-foreground">Joined</span>
+            <span>{initial.date_joined ? new Date(initial.date_joined).toLocaleDateString() : '—'}</span>
+            <span className="text-muted-foreground">Date of Birth</span>
+            <span>{initial.date_of_birth ? new Date(initial.date_of_birth).toLocaleDateString() : '—'}</span>
+          </div>
+        )}
         <div className="grid grid-cols-2 gap-3">
           <div className="col-span-2 space-y-1.5">
             <Label>Email <span className="text-destructive">*</span></Label>
@@ -180,28 +188,30 @@ export default function UsersPage() {
         </SelectContent>
       </Select>
 
-      {loading ? <TableSkeleton cols={5} /> : (
+      {loading ? <TableSkeleton cols={6} /> : (
         <>
-          <div className="rounded-xl border border-border overflow-hidden">
-            <Table>
+          <div className="rounded-xl border border-border overflow-x-auto">
+            <Table className="min-w-[750px]">
               <TableHeader>
                 <TableRow>
-                  <TableHead>User</TableHead>
-                  <TableHead className="hidden sm:table-cell">Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Name</TableHead>
                   <TableHead>Role</TableHead>
-                  <TableHead className="hidden md:table-cell">Joined</TableHead>
+                  <TableHead>Joined</TableHead>
+                  <TableHead>Date of Birth</TableHead>
                   <TableHead className="w-20 text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {users.length === 0 ? (
-                  <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-10">No users found.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-10">No users found.</TableCell></TableRow>
                 ) : users.map(u => (
                   <TableRow key={u.id}>
                     <TableCell className="text-sm font-medium">{u.email}</TableCell>
-                    <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">{[u.first_name, u.last_name].filter(Boolean).join(' ') || '—'}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{[u.first_name, u.last_name].filter(Boolean).join(' ') || '—'}</TableCell>
                     <TableCell><span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${ROLE_COLORS[u.role] || 'bg-muted text-muted-foreground'}`}>{u.role}</span></TableCell>
-                    <TableCell className="hidden md:table-cell text-sm text-muted-foreground">{u.date_joined ? new Date(u.date_joined).toLocaleDateString() : '—'}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{u.date_joined ? new Date(u.date_joined).toLocaleDateString() : '—'}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{u.date_of_birth ? new Date(u.date_of_birth).toLocaleDateString() : '—'}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
                         <button onClick={() => { reset(); setEditUser(u); setShowForm(true) }} className="p-1.5 text-muted-foreground hover:text-foreground transition-colors"><Pencil className="h-3.5 w-3.5" /></button>
