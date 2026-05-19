@@ -42,7 +42,7 @@ export default function Navbar() {
   useEffect(() => {
     if (!accessToken) return
     fetchUnreadCount()
-    const interval = setInterval(fetchUnreadCount, 60000)
+    const interval = setInterval(fetchUnreadCount, 180000)
     return () => clearInterval(interval)
   }, [accessToken, fetchUnreadCount])
 
